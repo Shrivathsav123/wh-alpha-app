@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WH Alpha">
+<meta name="theme-color" content="#080808">
+<title>WH Alpha</title>
+<link rel="apple-touch-icon" href="icon-wh.png">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080808; color: #e5e5e5; font-family: 'Space Mono', monospace; -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 2px; } ::-webkit-scrollbar-thumb { background: #222; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  input { -webkit-appearance: none; border-radius: 8px; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+const GITHUB_RAW = "https://raw.githubusercontent.com/Shrivathsav123/wh-alpha-tracker/main/data/history.json";
+const PASSWORD = "alpha2026";
+
+const TYPE_CFG = {
+  TRUMP_SIGNAL:    { label:"TRUMP",      color:"#ff4444", icon:"🇺🇸" },
+  CONTRACT:        { label:"CONTRACT",   color:"#3b9eff", icon:"📋" },
+  EXECUTIVE_ORDER: { label:"EXEC ORDER", color:"#a855f7", icon:"📜" },
+  DISCLOSURE:      { label:"DISCLOSURE", color:"#f59e0b", icon:"👔" },
+  DOGE:            { label:"DOGE CUT",   color:"#6b7280", icon:"✂️" },
+  TARIFF:          { label:"TARIFF",     color:"#10b981", icon:"⚖️" },
+  NEWS:            { label:"NEWS",       color:"#ef4444", icon:"🇺🇸" },
+};
+
+const SENT_COLOR = { bullish:"#22c55e", bearish:"#ef4444", neutral:"#eab308" };
+
+const DEMO = [
+  { id:"d1", type:"TRUMP_SIGNAL", ticker:"MU", company:"Micron Technology", sentiment:"bullish", conviction:3, quote:"Micron is a great American company!", source:"Truth Social", timestamp:new Date().toISOString(), catalystSummary:"Direct presidential praise — historically precedes 15-30% moves", estimatedImpact:"+15 to +30%", savedAt:new Date().toISOString() },
+  { id:"d2", type:"CONTRACT", ticker:"DELL", company:"Dell Technologies", sentiment:"bullish", conviction:3, quote:"$9.7B contract awarded to Dell by Dept of Defense", source:"USASpending.gov", timestamp:new Date().toISOString(), catalystSummary:"Largest DoD IT contract this year", estimatedImpact:"+8 to +15%", amountFormatted:"$9.7B", savedAt:new Date().toISOString() },
+  { id:"d3", type:"EXECUTIVE_ORDER", ticker:"NVDA", company:"AI Semiconductor Sector", sentiment:"bullish", conviction:3, quote:"Executive Order on AI Infrastructure — $500B federal investment", source:"Federal Register", timestamp:new Date().toISOString(), catalystSummary:"Federal AI mandate supercharges semiconductor demand", estimatedImpact:"+10 to +25%", savedAt:new Date().toISOString() },
+  { id:"d4", type:"DOGE", ticker:"LDOS", company:"Leidos Holdings", sentiment:"bearish", conviction:3, quote:"DOGE cancels $2.1B Leidos federal IT contract", source:"DOGE.gov", timestamp:new Date().toISOString(), catalystSummary:"Major contract cancellation — direct revenue loss", estimatedImpact:"-10 to -20%", amountFormatted:"-$2.1B", savedAt:new Date().toISOString() },
+  { id:"d5", type:"DISCLOSURE", ticker:"PLTR", company:"Palantir Technologies", sentiment:"bullish", conviction:3, quote:"Treasury Sec. Bessent disclosed $250K-$500K purchase of Palantir", source:"STOCK Act", timestamp:new Date().toISOString(), catalystSummary:"Cabinet-level insider buy", estimatedImpact:"+5 to +15%", redFlag:true, savedAt:new Date().toISOString() },
+];
+
+function PasswordGate({ onUnlock }) {
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState(false);
+  const [shake, setShake] = useState(false);
+  const attempt = () => {
+    if (pw === PASSWORD) { onUnlock(); }
+    else { setErr(true); setShake(true); setTimeout(() => setShake(false), 500); setPw(""); }
+  };
+  return (
+    <div style={{minHeight:"100vh",background:"#080808",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{textAlign:"center",width:"100%",maxWidth:340}}>
+        <div style={{fontSize:52,marginBottom:8}}>🇺🇸</div>
+        <div style={{fontFamily:"Syne,sans-serif",fontSize:26,fontWeight:800,color:"#fff",marginBottom:4}}>WH ALPHA</div>
+        <div style={{color:"#333",fontSize:10,letterSpacing:3,marginBottom:40}}>PRIVATE TERMINAL</div>
+        <div style={{animation:shake?"shake 0.4s ease":"none"}}>
+          <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&attempt()} placeholder="Enter password"
+            style={{background:"#111",border:`1px solid ${err?"#ef4444":"#222"}`,color:"#fff",padding:"14px 20px",fontSize:14,width:"100%",outline:"none",fontFamily:"Space Mono,monospace",textAlign:"center",display:"block",marginBottom:10}} />
+          {err && <div style={{color:"#ef4444",fontSize:11,marginBottom:10}}>Incorrect password</div>}
+          <button onClick={attempt} style={{background:"#ef4444",border:"none",color:"#fff",padding:"13px 0",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"Space Mono,monospace",letterSpacing:2,width:"100%"}}>ENTER →</button>
+        </div>
+        <div style={{color:"#1f1f1f",fontSize:10,marginTop:20}}>Hint: alpha2026</div>
+      </div>
+    </div>
+  );
+}
+
+function SignalCard({ s, onTrade }) {
+  const [open, setOpen] = useState(false);
+  const cfg = TYPE_CFG[s.type] || { color:"#888", icon:"📰", label:s.type };
+  const sc = SENT_COLOR[s.sentiment] || "#eab308";
+  return (
+    <div onClick={()=>setOpen(o=>!o)} style={{background:"#0f0f0f",border:`1px solid ${open?cfg.color+"44":"#1a1a1a"}`,borderLeft:`3px solid ${cfg.color}`,borderRadius:10,padding:"13px 15px",marginBottom:9,cursor:"pointer"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:5,alignItems:"center"}}>
+            <span style={{background:cfg.color+"18",color:cfg.color,fontSize:9,padding:"2px 7px",borderRadius:4,fontFamily:"monospace",letterSpacing:1}}>{cfg.icon} {cfg.label}</span>
+            <span style={{color:sc,fontSize:9,fontFamily:"monospace"}}>{s.sentiment==="bullish"?"▲":s.sentiment==="bearish"?"▼":"◆"} {(s.sentiment||"").toUpperCase()}</span>
+            {"█".repeat(s.conviction||1)+"░".repeat(3-(s.conviction||1))} 
+            {s.redFlag && <span style={{color:"#ef4444",fontSize:9}}>⚠️</span>}
+          </div>
+          <div style={{display:"flex",alignItems:"baseline",gap:7,marginBottom:3}}>
+            <span style={{fontFamily:"monospace",fontSize:16,fontWeight:700,color:"#fff"}}>${s.ticker||s.symbol}</span>
+            <span style={{color:"#4a4a4a",fontSize:11,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.company}</span>
+          </div>
+          <p style={{color:"#777",fontSize:12,margin:0,lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{s.quote||s.title}</p>
+        </div>
+        <div style={{textAlign:"right",flexShrink:0}}>
+          {s.estimatedImpact && <div style={{color:sc,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{s.estimatedImpact}</div>}
+          {s.amountFormatted && <div style={{color:"#3b9eff",fontSize:11,fontFamily:"monospace"}}>{s.amountFormatted}</div>}
+          <div style={{color:"#333",fontSize:9,marginTop:4}}>{new Date(s.timestamp||s.savedAt).toLocaleDateString()}</div>
+        </div>
+      </div>
+      {open && (
+        <div style={{marginTop:11,paddingTop:11,borderTop:"1px solid #1a1a1a"}}>
+          {(s.catalystSummary||s.summary) && <div style={{background:"#0a0a0a",borderRadius:6,padding:"9px 12px",marginBottom:9}}><div style={{color:"#2a2a2a",fontSize:8,letterSpacing:2,marginBottom:3,fontFamily:"monospace"}}>CATALYST</div><div style={{color:"#bbb",fontSize:12,lineHeight:1.7}}>{s.catalystSummary||s.summary}</div></div>}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{color:"#444",fontSize:10}}>{s.source} · {new Date(s.timestamp||s.savedAt).toLocaleString()}</span>
+            <button onClick={e=>{e.stopPropagation();onTrade(s);}} style={{background:"#1a1a1a",border:"1px solid #2a2a2a",color:"#888",padding:"5px 12px",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"monospace"}}>+ Log Trade</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Portfolio() {
+  const [trades, setTrades] = useState(()=>{try{return JSON.parse(localStorage.getItem("wha_trades")||"[]");}catch{return [];}});
+  const [form, setForm] = useState(false);
+  const [t, setT] = useState({ticker:"",entry:"",exit:"",shares:""});
+  const save = ts => { setTrades(ts); try{localStorage.setItem("wha_trades",JSON.stringify(ts));}catch{} };
+  const add = () => { if(!t.ticker||!t.entry)return; save([{...t,id:Date.now().toString(),date:new Date().toISOString(),entry:+t.entry,exit:t.exit?+t.exit:null,shares:+t.shares||1},...trades]); setT({ticker:"",entry:"",exit:"",shares:""}); setForm(false); };
+  const pnl = trades.reduce((s,t)=>s+(t.exit?(t.exit-t.entry)*t.shares:0),0);
+  const closed = trades.filter(t=>t.exit); const wins = closed.filter(t=>t.exit>t.entry).length;
+  return (
+    <div>
+      <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+        {[["TOTAL P&L",`${pnl>=0?"+":""}$${Math.abs(pnl).toFixed(0)}`,pnl>=0?"#22c55e":"#ef4444"],["WIN RATE",closed.length?`${Math.round(wins/closed.length*100)}%`:"—","#3b9eff"],["TRADES",trades.length,"#a855f7"]].map(([l,v,c])=>(
+          <div key={l} style={{flex:1,minWidth:100,background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 16px"}}>
+            <div style={{color:"#333",fontSize:8,letterSpacing:2,fontFamily:"monospace",marginBottom:6}}>{l}</div>
+            <div style={{color:c,fontSize:20,fontWeight:700,fontFamily:"monospace"}}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <button onClick={()=>setForm(f=>!f)} style={{background:"#ef4444",border:"none",color:"#fff",padding:"9px 18px",borderRadius:7,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"monospace",marginBottom:14,letterSpacing:1}}>+ LOG TRADE</button>
+      {form && (
+        <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:10,padding:14,marginBottom:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+            {[["Ticker","ticker","TSLA"],["Entry $","entry","379.49"],["Exit $","exit","Leave blank if open"],["Shares","shares","10"]].map(([l,k,ph])=>(
+              <div key={k}><div style={{color:"#333",fontSize:8,letterSpacing:1,fontFamily:"monospace",marginBottom:3}}>{l}</div>
+              <input value={t[k]} onChange={e=>setT(p=>({...p,[k]:e.target.value}))} placeholder={ph} style={{background:"#1a1a1a",border:"1px solid #252525",color:"#fff",padding:"8px 10px",fontSize:11,width:"100%",outline:"none",fontFamily:"monospace"}} /></div>
+            ))}
+          </div>
+          <div style={{display:"flex",gap:7}}><button onClick={add} style={{background:"#22c55e",border:"none",color:"#000",padding:"8px 18px",borderRadius:5,fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"monospace"}}>SAVE</button><button onClick={()=>setForm(false)} style={{background:"#1a1a1a",border:"1px solid #252525",color:"#666",padding:"8px 14px",borderRadius:5,fontSize:10,cursor:"pointer",fontFamily:"monospace"}}>CANCEL</button></div>
+        </div>
+      )}
+      {trades.length===0&&!form&&<div style={{color:"#2a2a2a",textAlign:"center",padding:"30px 20px",fontFamily:"monospace",fontSize:11}}>No trades yet. Log your first trade!</div>}
+      {trades.map(trade=>{
+        const p=trade.exit?(trade.exit-trade.entry)*trade.shares:null;
+        const pct=trade.exit?((trade.exit-trade.entry)/trade.entry*100):null;
+        return(<div key={trade.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderLeft:`3px solid ${p===null?"#333":p>=0?"#22c55e":"#ef4444"}`,borderRadius:8,padding:"11px 13px",marginBottom:7,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div><div style={{fontFamily:"monospace",fontSize:15,fontWeight:700,color:"#fff",marginBottom:2}}>${trade.ticker}</div><div style={{color:"#444",fontSize:10}}>Entry: ${trade.entry} · {trade.shares} shares</div></div>
+          <div style={{textAlign:"right"}}>{p!==null?<><div style={{color:p>=0?"#22c55e":"#ef4444",fontSize:15,fontWeight:700,fontFamily:"monospace"}}>{p>=0?"+":""}${Math.abs(p).toFixed(0)}</div><div style={{color:p>=0?"#22c55e":"#ef4444",fontSize:10}}>{pct>=0?"+":""}{pct?.toFixed(1)}%</div></>:<div style={{color:"#f59e0b",fontSize:10,fontFamily:"monospace"}}>OPEN</div>}
+          <button onClick={()=>save(trades.filter(x=>x.id!==trade.id))} style={{background:"none",border:"none",color:"#2a2a2a",fontSize:9,cursor:"pointer",display:"block",marginTop:3}}>remove</button></div>
+        </div>);
+      })}
+    </div>
+  );
+}
+
+function App() {
+  const [unlocked, setUnlocked] = useState(()=>{try{return localStorage.getItem("wha_auth")==="true";}catch{return false;}});
+  const [tab, setTab] = useState("feed");
+  const [signals, setSignals] = useState(DEMO);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [filter, setFilter] = useState("ALL");
+  const [tradeModal, setTradeModal] = useState(null);
+  const [tm, setTm] = useState({entry:"",exit:"",shares:""});
+
+  const fetchData = useCallback(async()=>{
+    try {
+      const res = await fetch(`${GITHUB_RAW}?t=${Date.now()}`);
+      if(!res.ok) throw new Error();
+      const data = await res.json();
+      if(Array.isArray(data)&&data.length>0) setSignals(data.map((s,i)=>({...s,id:s.id||`${s.savedAt}-${i}`})));
+      setError(false);
+    } catch { setError(true); } finally { setLoading(false); }
+  },[]);
+
+  useEffect(()=>{if(unlocked)fetchData();},[unlocked,fetchData]);
+  useEffect(()=>{if(!unlocked)return;const t=setInterval(fetchData,15*60*1000);return()=>clearInterval(t);},[unlocked,fetchData]);
+
+  const handleUnlock = ()=>{ setUnlocked(true); try{localStorage.setItem("wha_auth","true");}catch{} };
+
+  if(!unlocked) return React.createElement(PasswordGate,{onUnlock:handleUnlock});
+
+  const TABS = [{id:"feed",icon:"📡",label:"FEED"},{id:"charts",icon:"📊",label:"CHARTS"},{id:"search",icon:"🔍",label:"SEARCH"},{id:"portfolio",icon:"💼",label:"P&L"}];
+  const FILTERS = ["ALL","HIGH","BULLISH","BEARISH","TRUMP_SIGNAL","CONTRACT","EXECUTIVE_ORDER","DISCLOSURE","DOGE"];
+  const filtered = filter==="ALL"?signals:filter==="HIGH"?signals.filter(s=>s.conviction===3):filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):signals.filter(s=>s.type===filter);
+
+  const saveQuickTrade = ()=>{
+    if(!tm.entry)return;
+    try{const ex=JSON.parse(localStorage.getItem("wha_trades")||"[]");localStorage.setItem("wha_trades",JSON.stringify([{id:Date.now().toString(),ticker:tradeModal.ticker||tradeModal.symbol,entry:+tm.entry,exit:tm.exit?+tm.exit:null,shares:+tm.shares||1,notes:tradeModal.source,date:new Date().toISOString()},...ex]));}catch{}
+    setTradeModal(null);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#080808",paddingBottom:20}}>
+      {/* Header */}
+      <div style={{background:"#0a0a0a",borderBottom:"1px solid #141414",padding:"12px 16px",position:"sticky",top:0,zIndex:50}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:20}}>🇺🇸</span>
+            <div><div style={{fontFamily:"Syne,sans-serif",fontSize:16,fontWeight:800,color:"#fff"}}>WH ALPHA</div><div style={{color:"#2a2a2a",fontSize:7,letterSpacing:2}}>WHITE HOUSE TERMINAL</div></div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            {loading?<span style={{color:"#f59e0b",fontSize:8}}>⟳ LOADING</span>:error?<span style={{color:"#ef4444",fontSize:8}}>⚠ DEMO MODE</span>:<><span style={{width:5,height:5,background:"#22c55e",borderRadius:"50%",display:"inline-block"}}/><span style={{color:"#22c55e",fontSize:8}}>LIVE</span></>}
+            <button onClick={fetchData} style={{background:"none",border:"1px solid #1c1c1c",color:"#333",padding:"2px 7px",borderRadius:3,fontSize:9,cursor:"pointer"}}>↻</button>
+          </div>
+        </div>
+        <div style={{display:"flex",borderBottom:"1px solid #111"}}>
+          {TABS.map(t=><button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:"none",border:"none",borderBottom:tab===t.id?"2px solid #ef4444":"2px solid transparent",color:tab===t.id?"#fff":"#333",padding:"6px 4px",fontSize:8,cursor:"pointer",fontFamily:"monospace",letterSpacing:1}}>{t.icon} {t.label}</button>)}
+        </div>
+      </div>
+
+      <div style={{padding:16,animation:"fadeIn 0.3s ease"}}>
+        {tab==="feed"&&<>
+          <div style={{display:"flex",gap:5,overflowX:"auto",marginBottom:12,paddingBottom:2}}>
+            {FILTERS.map(f=>{const cfg=TYPE_CFG[f];return(<button key={f} onClick={()=>setFilter(f)} style={{background:filter===f?(cfg?.color||"#ef4444")+"18":"#0f0f0f",border:`1px solid ${filter===f?(cfg?.color||"#ef4444")+"55":"#1a1a1a"}`,color:filter===f?(cfg?.color||"#ef4444"):"#333",padding:"3px 9px",borderRadius:20,fontSize:8,cursor:"pointer",whiteSpace:"nowrap",fontFamily:"monospace"}}>{cfg?.icon||""} {f}</button>);})}
+          </div>
+          {filtered.map(s=><SignalCard key={s.id} s={s} onTrade={sig=>{setTradeModal(sig);setTm({entry:"",exit:"",shares:"",ticker:sig.ticker||sig.symbol});}}/>)}
+        </>}
+
+        {tab==="charts"&&<div>
+          <div style={{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}}>
+            {[["SIGNALS",signals.length,"#3b9eff"],["BULLISH",signals.filter(s=>s.sentiment==="bullish").length,"#22c55e"],["BEARISH",signals.filter(s=>s.sentiment==="bearish").length,"#ef4444"],["HIGH",signals.filter(s=>s.conviction===3).length,"#f59e0b"]].map(([l,v,c])=>(
+              <div key={l} style={{flex:1,minWidth:80,background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:10,padding:"14px 16px"}}><div style={{color:"#333",fontSize:8,letterSpacing:2,fontFamily:"monospace",marginBottom:6}}>{l}</div><div style={{color:c,fontSize:22,fontWeight:700,fontFamily:"monospace"}}>{v}</div></div>
+            ))}
+          </div>
+          <div style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderRadius:10,padding:"16px 18px"}}>
+            <div style={{color:"#2a2a2a",fontSize:8,letterSpacing:2,fontFamily:"monospace",marginBottom:14}}>BY TYPE</div>
+            {Object.entries(signals.reduce((a,s)=>{a[s.type]=(a[s.type]||0)+1;return a},{})).sort((a,b)=>b[1]-a[1]).map(([type,count])=>{
+              const cfg=TYPE_CFG[type]||{color:"#888",icon:"📰",label:type};
+              const pct=Math.round(count/signals.length*100);
+              return(<div key={type} style={{marginBottom:10}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{color:cfg.color,fontSize:10,fontFamily:"monospace"}}>{cfg.icon} {cfg.label}</span><span style={{color:"#444",fontSize:10}}>{count}</span></div><div style={{height:3,background:"#1a1a1a",borderRadius:2}}><div style={{height:3,background:cfg.color,borderRadius:2,width:`${pct}%`}}/></div></div>);
+            })}
+          </div>
+        </div>}
+
+        {tab==="search"&&<div>
+          {React.createElement(()=>{
+            const [q,setQ]=useState("");
+            const results=q.length>1?signals.filter(s=>(s.ticker||s.symbol||"").toLowerCase().includes(q.toLowerCase())||(s.company||"").toLowerCase().includes(q.toLowerCase())||(s.quote||s.title||"").toLowerCase().includes(q.toLowerCase())):[];
+            return(<div><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search ticker, company, keyword..." style={{background:"#0f0f0f",border:"1px solid #1a1a1a",color:"#fff",padding:"11px 14px",fontSize:12,width:"100%",outline:"none",fontFamily:"monospace",marginBottom:14}}/>{q.length>1&&!results.length&&<div style={{color:"#2a2a2a",textAlign:"center",padding:"30px 0",fontFamily:"monospace",fontSize:11}}>No signals for "{q}"</div>}{results.map(s=>{const cfg=TYPE_CFG[s.type]||{color:"#888"};return(<div key={s.id} style={{background:"#0f0f0f",border:"1px solid #1a1a1a",borderLeft:`3px solid ${cfg.color}`,borderRadius:8,padding:"11px 13px",marginBottom:7}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontFamily:"monospace",fontSize:14,fontWeight:700,color:"#fff",marginBottom:2}}>${s.ticker||s.symbol} <span style={{color:"#333",fontSize:10,fontWeight:400}}>{s.company}</span></div><div style={{color:"#666",fontSize:11,marginBottom:3}}>{(s.quote||s.title||"").slice(0,80)}</div><div style={{color:"#333",fontSize:10}}>{s.source}</div></div>{s.estimatedImpact&&<div style={{color:SENT_COLOR[s.sentiment],fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{s.estimatedImpact}</div>}</div></div>);})}</div>);
+          })}
+        </div>}
+
+        {tab==="portfolio"&&<Portfolio/>}
+      </div>
+
+      {tradeModal&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",display:"flex",alignItems:"flex-end",zIndex:100}}>
+          <div style={{background:"#111",borderRadius:"14px 14px 0 0",padding:18,width:"100%"}}>
+            <div style={{fontFamily:"Syne,sans-serif",fontSize:15,fontWeight:800,color:"#fff",marginBottom:3}}>Log Trade — ${tradeModal.ticker||tradeModal.symbol}</div>
+            <div style={{color:"#444",fontSize:10,marginBottom:14}}>{(tradeModal.quote||tradeModal.title||"").slice(0,70)}</div>
+            {[["Entry $","entry","379.49"],["Exit $","exit","Leave blank if open"],["Shares","shares","10"]].map(([l,k,ph])=>(
+              <div key={k} style={{marginBottom:9}}><div style={{color:"#333",fontSize:8,letterSpacing:1,marginBottom:3}}>{l}</div><input value={tm[k]||""} onChange={e=>setTm(p=>({...p,[k]:e.target.value}))} placeholder={ph} style={{background:"#1a1a1a",border:"1px solid #252525",color:"#fff",padding:"9px 12px",fontSize:12,width:"100%",outline:"none",fontFamily:"monospace"}}/></div>
+            ))}
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button onClick={saveQuickTrade} style={{flex:1,background:"#22c55e",border:"none",color:"#000",padding:11,borderRadius:7,fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"monospace"}}>SAVE TRADE</button>
+              <button onClick={()=>setTradeModal(null)} style={{flex:1,background:"#1a1a1a",border:"1px solid #252525",color:"#666",padding:11,borderRadius:7,fontSize:11,cursor:"pointer",fontFamily:"monospace"}}>CANCEL</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+</script>
+</body>
+</html>
