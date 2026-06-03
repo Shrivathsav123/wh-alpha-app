@@ -286,6 +286,58 @@ const DEMO = [
   { id:"d5", type:"DISCLOSURE", ticker:"PLTR", company:"Palantir Technologies", sentiment:"bullish", conviction:3, quote:"Treasury Sec. Bessent disclosed $250K-$500K purchase", source:"STOCK Act", timestamp:new Date().toISOString(), catalystSummary:"Cabinet-level insider buy — strong policy alignment", estimatedImpact:"+5 to +15%", redFlag:true, savedAt:new Date().toISOString() },
 ];
 
+// ── Transform scanner output to app format ───────────────────
+const transformSignal = (s, i) => {
+  if (s.type && s.sentiment && s.quote) return {...s, id: s.id || `${s.savedAt}-${i}`};
+  const score      = s.score || 0;
+  const sentiment  = score >= 5 ? "bullish" : score >= 3 ? "neutral" : "bearish";
+  const conviction = score >= 7 ? 3 : score >= 5 ? 2 : 1;
+  const signals    = s.signals || [];
+  const patterns   = s.patterns || [];
+  const newsItems  = s.news_signals || [];
+  const topSignal  = newsItems[0]?.title || signals[0] || patterns[0] || s.buy_rating || "Technical setup";
+  let type = "TECHNICAL";
+  if (newsItems.length > 0) type = "STOCK_NEWS";
+  const sigStr = (signals.join(" ") + patterns.join(" ")).toLowerCase();
+  if (sigStr.includes("breakout")) type = "MARKET_NEWS";
+  const ma  = s.ma  || {};
+  const rsi = s.rsi || {};
+  const summary = [
+    s.buy_rating ? `Rating: ${s.buy_rating}` : "",
+    ma.ma_signal || "",
+    ma.cross     || "",
+    signals.slice(0,2).join(" | "),
+    patterns.slice(0,2).join(" | "),
+  ].filter(Boolean).join("  ·  ");
+  return {
+    id:             s.id || `${s.savedAt||Date.now()}-${i}`,
+    type,
+    ticker:         s.ticker,
+    symbol:         s.ticker,
+    company:        s.name || s.ticker,
+    sentiment,
+    conviction,
+    score,
+    buy_rating:     s.buy_rating || "",
+    quote:          topSignal,
+    title:          topSignal,
+    source:         "Alpha Scanner",
+    timestamp:      s.savedAt || new Date().toISOString(),
+    savedAt:        s.savedAt || new Date().toISOString(),
+    catalystSummary: summary || "Technical setup detected",
+    estimatedImpact: score >= 7 ? "+15–30%" : score >= 5 ? "+8–15%" : "+3–8%",
+    ma_signal:      ma.ma_signal || "",
+    cross:          ma.cross     || "",
+    ma50:           ma.ma50,
+    ma200:          ma.ma200,
+    rsi_daily:      rsi.daily  ? rsi.daily.rsi  : null,
+    rsi_weekly:     rsi.weekly ? rsi.weekly.rsi : null,
+    patterns,
+    signals,
+    news_signals:   newsItems,
+  };
+};
+
 // ── Password Gate ─────────────────────────────────────────────
 function PasswordGate({ onUnlock, dark }) {
   const [pw, setPw] = useState(""); const [err, setErr] = useState(false);
@@ -349,14 +401,41 @@ function SignalCard({ s, onTrade, dark }) {
       {/* Expanded details */}
       {open && (
         <div style={{marginTop:14,paddingTop:14,borderTop:`1px solid var(--border)`}}>
-          {(s.catalystSummary||s.summary) && (
-            <div style={{background:"var(--input)",borderRadius:10,padding:"10px 12px",marginBottom:12}}>
-              <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Catalyst Analysis</div>
-              <div style={{fontSize:13,color:"var(--text)",lineHeight:1.7}}>{s.catalystSummary||s.summary}</div>
+          {/* RSI */}
+          {(s.rsi_daily||s.rsi_weekly) && (
+            <div style={{background:"var(--input)",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>RSI</div>
+              <div style={{display:"flex",gap:16}}>
+                {s.rsi_daily  && <span style={{fontSize:12,fontFamily:"Space Mono,monospace",color:s.rsi_daily<50?"#16a34a":"var(--text)"}}>Daily {s.rsi_daily}</span>}
+                {s.rsi_weekly && <span style={{fontSize:12,fontFamily:"Space Mono,monospace",color:s.rsi_weekly<50?"#16a34a":"var(--text)"}}>Weekly {s.rsi_weekly}</span>}
+              </div>
+            </div>
+          )}
+          {/* MA */}
+          {(s.ma_signal||s.cross) && (
+            <div style={{background:"var(--input)",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Moving Averages</div>
+              {s.ma_signal && <div style={{fontSize:12,color:"var(--text)",marginBottom:3}}>{s.ma_signal}</div>}
+              {s.cross     && <div style={{fontSize:12,color:"var(--text)",marginBottom:3}}>{s.cross}</div>}
+              {(s.ma50||s.ma200) && <div style={{fontSize:11,color:"var(--text3)",fontFamily:"Space Mono,monospace"}}>50MA ${s.ma50}  ·  200MA ${s.ma200}</div>}
+            </div>
+          )}
+          {/* Patterns */}
+          {s.patterns&&s.patterns.length>0 && (
+            <div style={{background:"var(--input)",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,marginBottom:6,textTransform:"uppercase"}}>Patterns</div>
+              {s.patterns.slice(0,3).map((p,i)=><div key={i} style={{fontSize:12,color:"var(--text)",marginBottom:2}}>{p}</div>)}
+            </div>
+          )}
+          {/* Catalyst */}
+          {s.catalystSummary && (
+            <div style={{background:"var(--input)",borderRadius:10,padding:"10px 12px",marginBottom:10}}>
+              <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,marginBottom:4,textTransform:"uppercase"}}>Analysis</div>
+              <div style={{fontSize:13,color:"var(--text)",lineHeight:1.7}}>{s.catalystSummary}</div>
             </div>
           )}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:11,color:"var(--text3)"}}>{s.source} · {new Date(s.timestamp||s.savedAt).toLocaleString()}</span>
+            <span style={{fontSize:11,color:"var(--text3)"}}>{s.source} · {new Date(s.timestamp||s.savedAt).toLocaleDateString()}</span>
             <button onClick={e=>{e.stopPropagation();onTrade(s);}} style={{background:"var(--input)",border:`1px solid var(--border)`,color:"var(--text2)",padding:"6px 14px",borderRadius:8,fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"Inter,sans-serif"}}>+ Log Trade</button>
           </div>
         </div>
@@ -533,7 +612,7 @@ function App() {
       const res=await fetch(`${GITHUB_RAW}?t=${Date.now()}`);
       if(!res.ok)throw new Error();
       const data=await res.json();
-      if(Array.isArray(data)&&data.length>0) setSignals(data.map((s,i)=>({...s,id:s.id||`${s.savedAt}-${i}`})));
+      if(Array.isArray(data)&&data.length>0) setSignals(data.map((s,i)=>transformSignal(s,i)));
       setError(false);
     }catch{setError(true);}finally{setLoading(false);}
   },[]);
