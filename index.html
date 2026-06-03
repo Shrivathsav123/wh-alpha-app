@@ -589,6 +589,198 @@ function Search({ signals, dark }) {
   );
 }
 
+
+// ── AI Trading Portfolio ──────────────────────────────────────
+const PORTFOLIO_RAW = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data/portfolio.json";
+const TRADES_RAW    = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data/trades.json";
+
+function TradingPortfolio({ dark }) {
+  const [portfolio, setPortfolio] = useState(null);
+  const [trades, setTrades]       = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [tab, setTab]             = useState("positions");
+
+  const fetchPortfolio = useCallback(async () => {
+    try {
+      const [pRes, tRes] = await Promise.all([
+        fetch(`${PORTFOLIO_RAW}?t=${Date.now()}`),
+        fetch(`${TRADES_RAW}?t=${Date.now()}`),
+      ]);
+      if (pRes.ok) setPortfolio(await pRes.json());
+      if (tRes.ok) setTrades(await tRes.json());
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
+  useEffect(() => {
+    const t = setInterval(fetchPortfolio, 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, [fetchPortfolio]);
+
+  if (loading) return (
+    <div style={{padding:40,textAlign:"center",color:"var(--text3)",fontSize:13}}>
+      Loading portfolio...
+    </div>
+  );
+
+  if (!portfolio) return (
+    <div style={{padding:40,textAlign:"center",color:"var(--text3)",fontSize:13}}>
+      No portfolio data yet. Run the scanner first!
+    </div>
+  );
+
+  const pnl        = portfolio.pnl || 0;
+  const pnl_pct    = portfolio.pnl_pct || 0;
+  const positions  = portfolio.positions || {};
+  const cash       = portfolio.cash || 0;
+  const total      = portfolio.total_value || 183000;
+  const wins       = portfolio.wins || 0;
+  const losses     = portfolio.losses || 0;
+  const winRate    = wins + losses > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+  const posCount   = Object.keys(positions).length;
+
+  return (
+    <div style={{padding:"16px 16px 100px"}}>
+      {/* Header stats */}
+      <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:20,padding:"20px 16px",marginBottom:16,boxShadow:"var(--shadow)"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontWeight:500,marginBottom:6,letterSpacing:1,textTransform:"uppercase"}}>Portfolio Value</div>
+        <div style={{fontSize:32,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace",marginBottom:4}}>${total.toLocaleString()}</div>
+        <div style={{fontSize:16,fontWeight:600,color:pnl>=0?"#16a34a":"#dc2626",fontFamily:"Space Mono,monospace"}}>
+          {pnl>=0?"+":""}{pnl.toLocaleString("en-US",{maximumFractionDigits:0})} ({pnl_pct>=0?"+":""}{pnl_pct.toFixed(2)}%)
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="stat-grid" style={{marginBottom:16}}>
+        {[
+          ["Cash", "$"+cash.toLocaleString("en-US",{maximumFractionDigits:0}), "#3b82f6"],
+          ["Positions", posCount, "#8b5cf6"],
+          ["Win Rate", winRate+"%", "#16a34a"],
+          ["Trades", (wins+losses), "#f59e0b"],
+        ].map(([l,v,c]) => (
+          <div key={l} className="stat-card">
+            <div style={{fontSize:11,color:"var(--text2)",fontWeight:500,marginBottom:6}}>{l}</div>
+            <div style={{fontSize:20,fontWeight:700,color:c,fontFamily:"Space Mono,monospace"}}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Sub tabs */}
+      <div style={{display:"flex",gap:8,marginBottom:16}}>
+        {["positions","history"].map(t => (
+          <button key={t} onClick={()=>setTab(t)} style={{
+            flex:1, padding:"10px", borderRadius:10, border:"1px solid var(--border)",
+            background: tab===t ? "var(--tab-active)" : "var(--card)",
+            color: tab===t ? (dark?"#000":"#fff") : "var(--text2)",
+            fontFamily:"Inter,sans-serif", fontSize:12, fontWeight:600, cursor:"pointer",
+          }}>
+            {t === "positions" ? `Open (${posCount})` : `History (${trades.length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Open Positions */}
+      {tab === "positions" && (
+        posCount === 0
+          ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No open positions</div>
+          : Object.entries(positions).map(([ticker, pos]) => {
+              const pnl_p   = pos.pnl_pct || 0;
+              const pnlAmt  = pos.pnl || 0;
+              const isPos   = pnl_p >= 0;
+              const stopPct = ((pos.current_price - pos.stop_loss) / pos.current_price * 100).toFixed(1);
+              return (
+                <div key={ticker} className="card" style={{cursor:"default", borderLeft:`3px solid ${isPos?"#16a34a":"#dc2626"}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div>
+                      <div style={{fontSize:18,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${ticker}</div>
+                      <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{pos.trade_type?.toUpperCase()} · {pos.shares} shares</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:18,fontWeight:700,color:isPos?"#16a34a":"#dc2626",fontFamily:"Space Mono,monospace"}}>
+                        {pnl_p>=0?"+":""}{pnl_p.toFixed(2)}%
+                      </div>
+                      <div style={{fontSize:12,color:isPos?"#16a34a":"#dc2626"}}>
+                        {pnlAmt>=0?"+":""}${Math.abs(pnlAmt).toLocaleString("en-US",{maximumFractionDigits:0})}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+                    {[
+                      ["Entry", "$"+pos.entry_price?.toFixed(2)],
+                      ["Current", "$"+(pos.current_price||pos.entry_price)?.toFixed(2)],
+                      ["Stop", "$"+pos.stop_loss?.toFixed(2)+" ("+stopPct+"%)"],
+                    ].map(([l,v]) => (
+                      <div key={l} style={{background:"var(--input)",borderRadius:8,padding:"8px 10px"}}>
+                        <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>{l}</div>
+                        <div style={{fontSize:12,color:"var(--text)",fontFamily:"Space Mono,monospace",fontWeight:600}}>{v}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {pos.reasoning && (
+                    <div style={{background:"var(--input)",borderRadius:8,padding:"10px 12px"}}>
+                      <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>AI Reasoning</div>
+                      <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{pos.reasoning}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+      )}
+
+      {/* Trade History */}
+      {tab === "history" && (
+        trades.length === 0
+          ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No trades yet</div>
+          : trades.slice(0,30).map((trade, i) => {
+              const isBuy = trade.type === "BUY";
+              const pnl_t = trade.pnl || 0;
+              return (
+                <div key={i} className="card" style={{cursor:"default",borderLeft:`3px solid ${isBuy?"#3b82f6":pnl_t>=0?"#16a34a":"#dc2626"}`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                        <span style={{fontSize:15,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${trade.ticker}</span>
+                        <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:6,
+                          background:isBuy?"#eff6ff":"pnl_t>=0?#f0fdf4:#fef2f2",
+                          color:isBuy?"#3b82f6":pnl_t>=0?"#16a34a":"#dc2626"}}>
+                          {trade.type}
+                        </span>
+                      </div>
+                      <div style={{fontSize:11,color:"var(--text3)"}}>
+                        {isBuy ? `${trade.shares} shares @ $${trade.price?.toFixed(2)}` : `Exit @ $${trade.sell_price?.toFixed(2)}`}
+                      </div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      {!isBuy && <div style={{fontSize:15,fontWeight:700,color:pnl_t>=0?"#16a34a":"#dc2626",fontFamily:"Space Mono,monospace"}}>
+                        {pnl_t>=0?"+":""}${Math.abs(pnl_t).toLocaleString("en-US",{maximumFractionDigits:0})}
+                      </div>}
+                      {isBuy && <div style={{fontSize:13,fontWeight:600,color:"var(--text2)",fontFamily:"Space Mono,monospace"}}>${trade.cost?.toLocaleString("en-US",{maximumFractionDigits:0})}</div>}
+                      <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{new Date(trade.date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  {trade.reasoning && (
+                    <div style={{marginTop:10,fontSize:11,color:"var(--text3)",lineHeight:1.5,fontStyle:"italic"}}>
+                      "{trade.reasoning.slice(0,100)}"
+                    </div>
+                  )}
+                </div>
+              );
+            })
+      )}
+
+      {/* Refresh */}
+      <div style={{textAlign:"center",marginTop:8}}>
+        <button onClick={fetchPortfolio} style={{background:"none",border:"1px solid var(--border)",color:"var(--text3)",padding:"8px 20px",borderRadius:20,fontSize:12,cursor:"pointer",fontFamily:"Inter,sans-serif"}}>
+          ↻ Refresh Portfolio
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────
 function App() {
   const [dark, setDark] = useState(()=>{try{return localStorage.getItem("wha_dark")==="true";}catch{return false;}});
@@ -630,7 +822,7 @@ function App() {
 
   if(!unlocked) return React.createElement(PasswordGate,{onUnlock:handleUnlock,dark});
 
-  const TABS=[{id:"feed",icon:"📡",label:"Feed"},{id:"charts",icon:"📊",label:"Charts"},{id:"search",icon:"🔍",label:"Search"},{id:"portfolio",icon:"💼",label:"P&L"}];
+  const TABS=[{id:"feed",icon:"📡",label:"Feed"},{id:"charts",icon:"📊",label:"Charts"},{id:"search",icon:"🔍",label:"Search"},{id:"trading",icon:"🤖",label:"AI Trades"},{id:"portfolio",icon:"💼",label:"P&L"}];
   const FILTERS=["ALL","BULLISH","BEARISH","HIGH","TRUMP_SIGNAL","CONTRACT","EXECUTIVE_ORDER","DISCLOSURE","DOGE","TARIFF"];
   const filtered=filter==="ALL"?signals:filter==="HIGH"?signals.filter(s=>s.conviction===3):filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):signals.filter(s=>s.type===filter);
 
@@ -689,6 +881,7 @@ function App() {
       {tab==="feed"&&<div style={{padding:"8px 16px 100px"}}>{filtered.map(s=><SignalCard key={s.id} s={s} dark={dark} onTrade={sig=>{setTradeModal(sig);setTm({entry:"",exit:"",shares:""});}}/>)}</div>}
       {tab==="charts"&&<Charts signals={signals} dark={dark}/>}
       {tab==="search"&&<Search signals={signals} dark={dark}/>}
+      {tab==="trading"&&<TradingPortfolio dark={dark}/>}
       {tab==="portfolio"&&<Portfolio dark={dark}/>}
 
       {/* Trade modal */}
