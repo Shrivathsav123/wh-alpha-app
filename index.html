@@ -606,7 +606,35 @@ function TradingPortfolio({ dark }) {
         fetch(`${PORTFOLIO_RAW}?t=${Date.now()}`),
         fetch(`${TRADES_RAW}?t=${Date.now()}`),
       ]);
-      if (pRes.ok) setPortfolio(await pRes.json());
+      if (pRes.ok) {
+        const data = await pRes.json();
+        // Fetch live prices for open positions
+        if (data.positions && Object.keys(data.positions).length > 0) {
+          const tickers = Object.keys(data.positions);
+          await Promise.all(tickers.map(async (ticker) => {
+            try {
+              const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1m`);
+              if (r.ok) {
+                const d = await r.json();
+                const meta = d?.chart?.result?.[0]?.meta;
+                const price = meta?.regularMarketPrice || meta?.previousClose;
+                if (price && data.positions[ticker]) {
+                  const pos = data.positions[ticker];
+                  pos.current_price = parseFloat(price.toFixed(2));
+                  pos.pnl = parseFloat(((pos.current_price - pos.entry_price) * pos.shares).toFixed(2));
+                  pos.pnl_pct = parseFloat(((pos.current_price - pos.entry_price) / pos.entry_price * 100).toFixed(2));
+                }
+              }
+            } catch {}
+          }));
+          // Recalculate total
+          const posValue = Object.values(data.positions).reduce((s, p) => s + (p.current_price * p.shares), 0);
+          data.total_value = parseFloat((data.cash + posValue).toFixed(2));
+          data.pnl = parseFloat((data.total_value - 183000).toFixed(2));
+          data.pnl_pct = parseFloat((data.pnl / 183000 * 100).toFixed(2));
+        }
+        setPortfolio(data);
+      }
       if (tRes.ok) setTrades(await tRes.json());
     } catch {}
     setLoading(false);
@@ -614,7 +642,7 @@ function TradingPortfolio({ dark }) {
 
   useEffect(() => { fetchPortfolio(); }, [fetchPortfolio]);
   useEffect(() => {
-    const t = setInterval(fetchPortfolio, 5 * 60 * 1000);
+    const t = setInterval(fetchPortfolio, 30 * 1000);
     return () => clearInterval(t);
   }, [fetchPortfolio]);
 
