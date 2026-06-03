@@ -706,6 +706,7 @@ function Search({ signals, dark }) {
 // ── AI Trading Portfolio ──────────────────────────────────────
 const PORTFOLIO_RAW = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data/portfolio.json";
 const TRADES_RAW    = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data/trades.json";
+const PRICES_RAW    = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data/prices.json";
 
 function TradingPortfolio({ dark }) {
   const [portfolio, setPortfolio] = useState(null);
@@ -721,34 +722,32 @@ function TradingPortfolio({ dark }) {
       ]);
       if (pRes.ok) {
         const data = await pRes.json();
-        // Fetch live prices for open positions
+        // Load live prices from scanner's prices.json
         if (data.positions && Object.keys(data.positions).length > 0) {
-          const tickers = Object.keys(data.positions);
-          for (const ticker of tickers) {
-            try {
-              const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1m&nocache=${Date.now()}`);
-              if (r.ok) {
-                const d = await r.json();
-                const meta = d?.chart?.result?.[0]?.meta;
-                const price = meta?.regularMarketPrice || meta?.previousClose;
-                if (price && data.positions[ticker]) {
-                  const pos = data.positions[ticker];
-                  const p = parseFloat(price.toFixed(2));
+          try {
+            const pRes = await fetch(`${PRICES_RAW}?t=${Date.now()}`);
+            if (pRes.ok) {
+              const prices = await pRes.json();
+              for (const [ticker, pos] of Object.entries(data.positions)) {
+                const lp = prices[ticker];
+                if (lp && lp.price) {
+                  const p = lp.price;
                   pos.current_price = p;
-                  pos.pnl = parseFloat(((p - pos.entry_price) * pos.shares).toFixed(2));
+                  pos.change_pct    = lp.change;
+                  pos.pnl     = parseFloat(((p - pos.entry_price) * pos.shares).toFixed(2));
                   pos.pnl_pct = parseFloat(((p - pos.entry_price) / pos.entry_price * 100).toFixed(2));
                 }
               }
-            } catch(e) { console.log("Price fetch error", ticker, e); }
-          }
-          // Recalculate total
-          let posValue = 0;
-          for (const p of Object.values(data.positions)) {
-            posValue += (p.current_price || p.entry_price) * p.shares;
-          }
-          data.total_value = parseFloat((data.cash + posValue).toFixed(2));
-          data.pnl = parseFloat((data.total_value - 183000).toFixed(2));
-          data.pnl_pct = parseFloat((data.pnl / 183000 * 100).toFixed(2));
+              // Recalculate total
+              let posValue = 0;
+              for (const p of Object.values(data.positions)) {
+                posValue += (p.current_price || p.entry_price) * p.shares;
+              }
+              data.total_value = parseFloat((data.cash + posValue).toFixed(2));
+              data.pnl     = parseFloat((data.total_value - 183000).toFixed(2));
+              data.pnl_pct = parseFloat((data.pnl / 183000 * 100).toFixed(2));
+            }
+          } catch(e) { console.log("Prices load error", e); }
         }
         setPortfolio(data);
       }
