@@ -724,24 +724,28 @@ function TradingPortfolio({ dark }) {
         // Fetch live prices for open positions
         if (data.positions && Object.keys(data.positions).length > 0) {
           const tickers = Object.keys(data.positions);
-          await Promise.all(tickers.map(async (ticker) => {
+          for (const ticker of tickers) {
             try {
-              const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1m`);
+              const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1m&nocache=${Date.now()}`);
               if (r.ok) {
                 const d = await r.json();
                 const meta = d?.chart?.result?.[0]?.meta;
                 const price = meta?.regularMarketPrice || meta?.previousClose;
                 if (price && data.positions[ticker]) {
                   const pos = data.positions[ticker];
-                  pos.current_price = parseFloat(price.toFixed(2));
-                  pos.pnl = parseFloat(((pos.current_price - pos.entry_price) * pos.shares).toFixed(2));
-                  pos.pnl_pct = parseFloat(((pos.current_price - pos.entry_price) / pos.entry_price * 100).toFixed(2));
+                  const p = parseFloat(price.toFixed(2));
+                  pos.current_price = p;
+                  pos.pnl = parseFloat(((p - pos.entry_price) * pos.shares).toFixed(2));
+                  pos.pnl_pct = parseFloat(((p - pos.entry_price) / pos.entry_price * 100).toFixed(2));
                 }
               }
-            } catch {}
-          }));
+            } catch(e) { console.log("Price fetch error", ticker, e); }
+          }
           // Recalculate total
-          const posValue = Object.values(data.positions).reduce((s, p) => s + (p.current_price * p.shares), 0);
+          let posValue = 0;
+          for (const p of Object.values(data.positions)) {
+            posValue += (p.current_price || p.entry_price) * p.shares;
+          }
           data.total_value = parseFloat((data.cash + posValue).toFixed(2));
           data.pnl = parseFloat((data.total_value - 183000).toFixed(2));
           data.pnl_pct = parseFloat((data.pnl / 183000 * 100).toFixed(2));
@@ -825,7 +829,7 @@ function TradingPortfolio({ dark }) {
       {tab === "positions" && (
         posCount === 0
           ? <div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No open positions</div>
-          : Object.entries(positions).map(([ticker, pos]) => {
+          : Object.entries(positions).sort((a,b)=>(b[1].pnl_pct||0)-(a[1].pnl_pct||0)).map(([ticker, pos]) => {
               const pnl_p   = pos.pnl_pct || 0;
               const pnlAmt  = pos.pnl || 0;
               const isPos   = pnl_p >= 0;
@@ -965,7 +969,7 @@ function App() {
 
   const TABS=[{id:"feed",icon:"📡",label:"Feed"},{id:"charts",icon:"📊",label:"Charts"},{id:"search",icon:"🔍",label:"Search"},{id:"trading",icon:"🤖",label:"AI Trades"},{id:"portfolio",icon:"💼",label:"P&L"}];
   const FILTERS=["ALL","BULLISH","BEARISH","TRUMP","NEWS"];
-  const filtered=filter==="ALL"?signals:filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):filter==="TRUMP"?signals.filter(s=>s.type==="TRUMP_SIGNAL"):filter==="NEWS"?signals.filter(s=>["STOCK_NEWS","NEWS","MARKET_NEWS"].includes(s.type)):signals;
+  const filtered=filter==="ALL"?signals:filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):filter==="TRUMP"?signals.filter(s=>s.type==="TRUMP_SIGNAL"):filter==="NEWS"?signals.filter(s=>s.news_signals&&s.news_signals.length>0):signals;
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg)"}}>
@@ -1019,7 +1023,27 @@ function App() {
       )}
 
       {/* Content */}
-      {tab==="feed"&&<div style={{padding:"8px 16px 100px"}}>{filtered.map(s=><SignalCard key={s.id} s={s} dark={dark} onTrade={sig=>{setTradeModal(sig);setTm({entry:"",exit:"",shares:""});}}/>)}</div>}
+      {tab==="feed"&&filter==="NEWS"&&(
+        <div style={{padding:"8px 16px 100px"}}>
+          {signals.filter(s=>s.news_signals&&s.news_signals.length>0).length===0&&(
+            <div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No news signals yet — run the scanner!</div>
+          )}
+          {signals.filter(s=>s.news_signals&&s.news_signals.length>0).map(s=>(
+            s.news_signals.map((n,i)=>(
+              <div key={s.id+i} className="card" style={{cursor:"default",borderLeft:"3px solid #3b82f6"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                  <span style={{fontSize:18,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${s.ticker}</span>
+                  <span style={{fontSize:11,color:"var(--text3)"}}>{new Date(s.savedAt).toLocaleDateString()}</span>
+                </div>
+                <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6,marginBottom:6}}>{n.title}</div>
+                {n.score>0&&<span style={{fontSize:11,fontWeight:600,color:"#16a34a"}}>✅ Positive catalyst</span>}
+                {n.score<0&&<span style={{fontSize:11,fontWeight:600,color:"#dc2626"}}>⚠️ Negative signal</span>}
+              </div>
+            ))
+          ))}
+        </div>
+      )}
+      {tab==="feed"&&filter!=="NEWS"&&<div style={{padding:"8px 16px 100px"}}>{filtered.map(s=><SignalCard key={s.id} s={s} dark={dark} onTrade={sig=>{setTradeModal(sig);setTm({entry:"",exit:"",shares:""});}}/>)}</div>}
       {tab==="charts"&&<Charts signals={signals} dark={dark}/>}
       {tab==="search"&&<Search signals={signals} dark={dark}/>}
       {tab==="trading"&&<TradingPortfolio dark={dark}/>}
