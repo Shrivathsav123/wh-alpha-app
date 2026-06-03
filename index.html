@@ -515,45 +515,47 @@ function Portfolio({ dark }) {
 }
 
 // ── Charts ────────────────────────────────────────────────────
+const CHART_TICKERS = ["NVDA","AMD","AAPL","MSFT","GOOGL","AMZN","TSLA","META","ANET","CDNS","AMAT","VRT","LITE","COHR","MU"];
+
 function Charts({ signals, dark }) {
-  const byType = Object.entries(signals.reduce((a,s)=>{a[s.type]=(a[s.type]||0)+1;return a},{})).sort((a,b)=>b[1]-a[1]);
+  const [selected, setSelected] = useState("NVDA");
+  const theme = dark ? "dark" : "light";
+
   return (
     <div style={{padding:"16px 16px 100px"}}>
-      <div className="stat-grid">
-        {[["Total",signals.length,"#3b82f6"],["Bullish",signals.filter(s=>s.sentiment==="bullish").length,"#16a34a"],
-          ["Bearish",signals.filter(s=>s.sentiment==="bearish").length,"#dc2626"],["High Conv",signals.filter(s=>s.conviction===3).length,"#f59e0b"]].map(([l,v,c])=>(
-          <div key={l} className="stat-card">
-            <div style={{fontSize:11,color:"var(--text2)",fontWeight:500,marginBottom:6}}>{l}</div>
-            <div style={{fontSize:22,fontWeight:700,color:c,fontFamily:"Space Mono,monospace"}}>{v}</div>
-          </div>
+      {/* Ticker selector */}
+      <div style={{overflowX:"auto",display:"flex",gap:8,paddingBottom:12,marginBottom:16}}>
+        {CHART_TICKERS.map(t => (
+          <button key={t} onClick={()=>setSelected(t)} style={{
+            flexShrink:0, padding:"6px 14px", borderRadius:20,
+            border:"1px solid var(--border)",
+            background: selected===t ? "#ef4444" : "var(--card)",
+            color: selected===t ? "#fff" : "var(--text2)",
+            fontFamily:"Space Mono,monospace", fontSize:11, fontWeight:700, cursor:"pointer",
+          }}>{t}</button>
         ))}
       </div>
 
-      <div className="card" style={{cursor:"default"}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:14,letterSpacing:0.3}}>SIGNALS BY TYPE</div>
-        {byType.map(([type,count])=>{
-          const cfg=TYPE_CFG[type]||{color:"#6b7280",icon:"📰",label:type};
-          const pct=Math.round(count/signals.length*100);
-          return(<div key={type} style={{marginBottom:12}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-              <span style={{fontSize:13,color:"var(--text)",fontWeight:500}}>{cfg.icon} {cfg.label}</span>
-              <span style={{fontSize:12,color:"var(--text2)"}}>{count}</span>
-            </div>
-            <div style={{height:4,background:"var(--border)",borderRadius:2}}>
-              <div style={{height:4,background:cfg.color,borderRadius:2,width:`${pct}%`,transition:"width 0.8s"}}/>
-            </div>
-          </div>);
-        })}
+      {/* TradingView Chart */}
+      <div style={{borderRadius:16,overflow:"hidden",border:"1px solid var(--border)",marginBottom:16,height:400}}>
+        <iframe
+          key={selected+theme}
+          src={`https://s.tradingview.com/widgetembed/?frameElementId=tv&symbol=NASDAQ:${selected}&interval=D&hidesidetoolbar=1&symboledit=0&saveimage=0&toolbarbg=${dark?"1c1c1e":"ffffff"}&studies=RSI%40tv-basicstudies&theme=${theme}&style=1&timezone=America%2FNew_York&withdateranges=1&hide_side_toolbar=1&allow_symbol_change=0&details=0&hotlist=0&calendar=0&news=0&hidevolume=0&widgetbar_width=0&utm_source=alpha&utm_medium=widget`}
+          style={{width:"100%",height:"100%",border:"none"}}
+          allowTransparency="true"
+          scrolling="no"
+        />
       </div>
 
+      {/* Quick stats */}
       <div className="card" style={{cursor:"default"}}>
-        <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:14}}>HOT TICKERS</div>
+        <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:14}}>HOT SIGNALS</div>
         {Object.entries(signals.reduce((a,s)=>{if(s.ticker&&!s.ticker.startsWith("SECTOR:"))a[s.ticker]=(a[s.ticker]||0)+((s.conviction||1));return a},{})).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([t,score])=>(
-          <div key={t} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <span style={{fontSize:14,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${t}</span>
+          <div key={t} onClick={()=>setSelected(t)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,cursor:"pointer"}}>
+            <span style={{fontSize:14,fontWeight:700,color:selected===t?"#ef4444":"var(--text)",fontFamily:"Space Mono,monospace"}}>${t}</span>
             <div style={{display:"flex",gap:4,alignItems:"center"}}>
               <div style={{width:80,height:4,background:"var(--border)",borderRadius:2}}>
-                <div style={{height:4,background:"#ef4444",borderRadius:2,width:`${Math.min(score*20,100)}%`}}/>
+                <div style={{height:4,background:"#ef4444",borderRadius:2,width:`${Math.min(score*20,100)}%`,transition:"width 0.5s"}}/>
               </div>
               <span style={{fontSize:11,color:"var(--text3)",width:20,textAlign:"right"}}>{score}</span>
             </div>
@@ -566,25 +568,136 @@ function Charts({ signals, dark }) {
 
 // ── Search ────────────────────────────────────────────────────
 function Search({ signals, dark }) {
-  const [q,setQ] = useState("");
-  const results = q.length>1 ? signals.filter(s=>(s.ticker||s.symbol||"").toLowerCase().includes(q.toLowerCase())||(s.company||"").toLowerCase().includes(q.toLowerCase())||(s.quote||s.title||"").toLowerCase().includes(q.toLowerCase())) : [];
+  const [q, setQ]           = useState("");
+  const [price, setPrice]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [priceData, setPriceData] = useState(null);
+
+  const fetchPrice = useCallback(async (ticker) => {
+    if (!ticker) return;
+    setLoading(true); setPrice(null); setPriceData(null);
+    try {
+      const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker.toUpperCase()}?range=5d&interval=1d`);
+      if (r.ok) {
+        const d  = await r.json();
+        const meta   = d?.chart?.result?.[0]?.meta;
+        const quotes = d?.chart?.result?.[0]?.indicators?.quote?.[0];
+        const closes = quotes?.close?.filter(c => c !== null) || [];
+        if (meta) {
+          const curr  = meta.regularMarketPrice || closes[closes.length-1];
+          const prev  = meta.previousClose || closes[closes.length-2];
+          const chg   = curr && prev ? ((curr-prev)/prev*100) : 0;
+          const high  = meta.regularMarketDayHigh;
+          const low   = meta.regularMarketDayLow;
+          const vol   = meta.regularMarketVolume;
+          const mktcap= meta.marketCap;
+          setPriceData({
+            ticker: ticker.toUpperCase(),
+            name:   meta.shortName || meta.longName || ticker,
+            price:  curr?.toFixed(2),
+            change: chg.toFixed(2),
+            high:   high?.toFixed(2),
+            low:    low?.toFixed(2),
+            volume: vol ? (vol/1e6).toFixed(1)+"M" : "—",
+            mktcap: mktcap ? "$"+(mktcap/1e9).toFixed(1)+"B" : "—",
+            positive: chg >= 0,
+          });
+        }
+      }
+    } catch {}
+    setLoading(false);
+  }, []);
+
+  const handleSearch = (val) => {
+    setQ(val);
+    if (val.length >= 1) {
+      clearTimeout(window._searchTimer);
+      window._searchTimer = setTimeout(() => fetchPrice(val), 600);
+    } else {
+      setPriceData(null);
+    }
+  };
+
+  const sigResults = q.length > 1 ? signals.filter(s =>
+    (s.ticker||"").toLowerCase().includes(q.toLowerCase()) ||
+    (s.company||"").toLowerCase().includes(q.toLowerCase())
+  ) : [];
+
   return (
     <div style={{padding:"16px 16px 100px"}}>
-      <input className="input-field" value={q} onChange={e=>setQ(e.target.value)} placeholder="Search ticker, company or keyword..." style={{marginBottom:14}}/>
-      {q.length>1&&!results.length&&<div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No signals for "{q}"</div>}
-      {results.map(s=>{
-        const cfg=TYPE_CFG[s.type]||{color:"#6b7280",icon:"📰"};
-        return(<div key={s.id} className="card" style={{borderLeft:`3px solid ${cfg.color}`,cursor:"default"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:16,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace",marginBottom:2}}>${s.ticker||s.symbol} <span style={{fontSize:12,color:"var(--text2)",fontFamily:"Inter,sans-serif",fontWeight:400}}>{s.company}</span></div>
-              <div style={{fontSize:12,color:"var(--text2)",marginBottom:4,lineHeight:1.5}}>{(s.quote||s.title||"").slice(0,80)}</div>
-              <div style={{fontSize:11,color:"var(--text3)"}}>{s.source}</div>
+      <input
+        className="input-field"
+        value={q}
+        onChange={e=>handleSearch(e.target.value)}
+        placeholder="Enter ticker — e.g. NVDA, AAPL, ANET..."
+        style={{marginBottom:14}}
+        autoCapitalize="characters"
+      />
+
+      {/* Live price card */}
+      {loading && <div style={{textAlign:"center",padding:"20px 0",color:"var(--text3)",fontSize:13}}>Fetching live price...</div>}
+
+      {priceData && (
+        <div className="card" style={{cursor:"default",marginBottom:16,borderLeft:`3px solid ${priceData.positive?"#16a34a":"#dc2626"}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+            <div>
+              <div style={{fontSize:22,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${priceData.ticker}</div>
+              <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>{priceData.name}</div>
             </div>
-            {s.estimatedImpact&&<span style={{fontSize:13,fontWeight:700,color:SENT_COLOR[s.sentiment],fontFamily:"Space Mono,monospace",marginLeft:8,flexShrink:0}}>{s.estimatedImpact}</span>}
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:26,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace"}}>${priceData.price}</div>
+              <div style={{fontSize:14,fontWeight:600,color:priceData.positive?"#16a34a":"#dc2626"}}>
+                {priceData.positive?"+":""}{priceData.change}%
+              </div>
+            </div>
           </div>
-        </div>);
-      })}
+
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {[
+              ["Day High",  "$"+priceData.high],
+              ["Day Low",   "$"+priceData.low],
+              ["Volume",    priceData.volume],
+              ["Mkt Cap",   priceData.mktcap],
+            ].map(([l,v])=>(
+              <div key={l} style={{background:"var(--input)",borderRadius:8,padding:"8px 10px"}}>
+                <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>{l}</div>
+                <div style={{fontSize:13,color:"var(--text)",fontFamily:"Space Mono,monospace",fontWeight:600}}>{v||"—"}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* TradingView mini chart */}
+          <div style={{marginTop:12,borderRadius:10,overflow:"hidden",height:200}}>
+            <iframe
+              key={priceData.ticker}
+              src={`https://s.tradingview.com/widgetembed/?frameElementId=tv_s&symbol=NASDAQ:${priceData.ticker}&interval=D&hidesidetoolbar=1&theme=${dark?"dark":"light"}&style=1&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&withdateranges=0`}
+              style={{width:"100%",height:"100%",border:"none"}}
+              scrolling="no"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Scanner signals for this ticker */}
+      {sigResults.length > 0 && (
+        <div>
+          <div style={{fontSize:11,color:"var(--text3)",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Scanner Signals</div>
+          {sigResults.map(s => {
+            const cfg = TYPE_CFG[s.type] || {color:"#6b7280", icon:"📰"};
+            return (
+              <div key={s.id} className="card" style={{borderLeft:`3px solid ${cfg.color}`,cursor:"default"}}>
+                <div style={{fontSize:15,fontWeight:700,color:"var(--text)",fontFamily:"Space Mono,monospace",marginBottom:4}}>${s.ticker||s.symbol}</div>
+                <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5,marginBottom:4}}>{(s.quote||s.title||"").slice(0,100)}</div>
+                <div style={{fontSize:11,color:"var(--text3)"}}>{s.source} · Score {s.score||"—"}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {q.length > 1 && !priceData && !loading && !sigResults.length && (
+        <div style={{textAlign:"center",padding:"40px 0",color:"var(--text3)",fontSize:13}}>No results for "{q}"</div>
+      )}
     </div>
   );
 }
@@ -851,8 +964,8 @@ function App() {
   if(!unlocked) return React.createElement(PasswordGate,{onUnlock:handleUnlock,dark});
 
   const TABS=[{id:"feed",icon:"📡",label:"Feed"},{id:"charts",icon:"📊",label:"Charts"},{id:"search",icon:"🔍",label:"Search"},{id:"trading",icon:"🤖",label:"AI Trades"},{id:"portfolio",icon:"💼",label:"P&L"}];
-  const FILTERS=["ALL","BULLISH","BEARISH","HIGH","TRUMP_SIGNAL","CONTRACT","EXECUTIVE_ORDER","DISCLOSURE","DOGE","TARIFF"];
-  const filtered=filter==="ALL"?signals:filter==="HIGH"?signals.filter(s=>s.conviction===3):filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):signals.filter(s=>s.type===filter);
+  const FILTERS=["ALL","BULLISH","BEARISH","TRUMP","NEWS"];
+  const filtered=filter==="ALL"?signals:filter==="BULLISH"?signals.filter(s=>s.sentiment==="bullish"):filter==="BEARISH"?signals.filter(s=>s.sentiment==="bearish"):filter==="TRUMP"?signals.filter(s=>s.type==="TRUMP_SIGNAL"):filter==="NEWS"?signals.filter(s=>["STOCK_NEWS","NEWS","MARKET_NEWS"].includes(s.type)):signals;
 
   return (
     <div style={{minHeight:"100vh",background:"var(--bg)"}}>
