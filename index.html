@@ -758,13 +758,8 @@ body {
 
   <!-- Reddit Pulse -->
   <div class="sec-h"><div class="sec-t">Reddit Pulse</div><div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:1px">WSB LIVE</div></div>
-  <div class="reddit-card">
-    <div><div class="r-sym">$NVDA</div><div class="r-desc">Bullish 78% · Trending #1</div></div>
-    <div><div class="r-count">🔥 2,341</div><div class="r-sent">mentions today</div></div>
-  </div>
-  <div class="reddit-card">
-    <div><div class="r-sym">$AMD</div><div class="r-desc">Bullish 71% · Trending #2</div></div>
-    <div><div class="r-count">891</div><div class="r-sent">mentions today</div></div>
+  <div id="reddit-container">
+    <div class="reddit-card"><div><div class="r-sym">Loading...</div><div class="r-desc">Fetching WSB data</div></div><div><div class="r-count">—</div></div></div>
   </div>
 
 </div>
@@ -909,6 +904,7 @@ const HISTORY_URL   = GITHUB_BASE + "/history.json";
 const PORTFOLIO_URL = GITHUB_BASE + "/portfolio.json";
 const TRADES_URL    = GITHUB_BASE + "/trades.json";
 const PRICES_URL    = GITHUB_BASE + "/prices.json";
+const REDDIT_URL    = GITHUB_BASE + "/reddit.json";
 const PASSWORD      = "alpha2026";
 
 // API key from localStorage
@@ -971,11 +967,12 @@ function transformSignal(s, i) {
 async function fetchAllData() {
   try {
     const t = Date.now();
-    const [hRes, pRes, trRes, prRes] = await Promise.allSettled([
+    const [hRes, pRes, trRes, prRes, rdRes] = await Promise.allSettled([
       fetch(HISTORY_URL   + '?t=' + t),
       fetch(PORTFOLIO_URL + '?t=' + t),
       fetch(TRADES_URL    + '?t=' + t),
       fetch(PRICES_URL    + '?t=' + t),
+      fetch(REDDIT_URL    + '?t=' + t),
     ]);
 
     // Signals
@@ -1018,6 +1015,12 @@ async function fetchAllData() {
     if (trRes.status === 'fulfilled' && trRes.value.ok) {
       trades = await trRes.value.json();
       renderTrades();
+    }
+
+    // Reddit
+    if (rdRes.status === 'fulfilled' && rdRes.value.ok) {
+      const redditData = await rdRes.value.json();
+      renderReddit(redditData);
     }
 
   } catch(e) { console.log('Data fetch error', e); }
@@ -1321,6 +1324,30 @@ async function sendChat() {
   }
 
   messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Render Reddit ──
+function renderReddit(data) {
+  const container = document.getElementById('reddit-container');
+  if (!container || !data || !data.length) return;
+  container.innerHTML = data.slice(0,5).map(r => {
+    const isBull = r.sentiment === 'bullish';
+    const isBear = r.sentiment === 'bearish';
+    const sentColor = isBull ? 'var(--green)' : isBear ? 'var(--red)' : 'var(--gold)';
+    const sentText  = isBull ? `Bullish ${r.bull_pct}%` : isBear ? `Bearish ${r.bear_pct}%` : `Mixed ${r.bull_pct}% bull`;
+    return `
+      <div class="reddit-card">
+        <div>
+          <div class="r-sym">$${r.ticker}</div>
+          <div class="r-desc" style="color:${sentColor}">${sentText} · Trending #${data.indexOf(r)+1}</div>
+        </div>
+        <div>
+          <div class="r-count">${r.mentions >= 1000 ? '🔥 ' + (r.mentions/1000).toFixed(1) + 'k' : r.mentions}</div>
+          <div class="r-sent">mentions today</div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Init ──
