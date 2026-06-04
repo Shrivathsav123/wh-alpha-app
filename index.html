@@ -919,47 +919,55 @@ let activeFilter = 'All';
 
 // ── Transform scanner signal to app format ──
 function transformSignal(s, i) {
-  if (s.type && s.sentiment && s.quote) return {...s, id: s.id || i};
-  const score      = s.score || 0;
-  const sentiment  = score >= 5 ? 'bullish' : score >= 3 ? 'neutral' : 'bearish';
-  const conviction = score >= 7 ? 3 : score >= 5 ? 2 : 1;
-  const signals    = s.signals || [];
-  const patterns   = s.patterns || [];
-  const newsItems  = s.news_signals || [];
-  const topSignal  = newsItems[0]?.title || signals[0] || patterns[0] || s.buy_rating || 'Technical setup';
-  const ma         = s.ma || {};
-  const rsi        = s.rsi || {};
-  const summary    = [s.buy_rating, ma.ma_signal, ma.cross, ...signals.slice(0,2)].filter(Boolean).join(' · ');
-  let type = 'TECHNICAL';
-  if (newsItems.length > 0) type = 'STOCK_NEWS';
-  const sigStr = (signals.join(' ') + patterns.join(' ')).toLowerCase();
-  if (sigStr.includes('breakout')) type = 'MARKET_NEWS';
+  const score    = s.score || 0;
+  const ma       = s.ma || {};
+  const rsi      = s.rsi || {};
+  const signals  = s.signals || [];
+  const patterns = s.patterns || [];
+  const news     = s.news_signals || [];
+
+  // Clean emoji unicode from strings
+  const clean = str => (str || '').replace(/\\u[0-9a-fA-F]{4}/g, '').replace(/[✅⚠️📍🚀🔊📊📈📉🔥⚡👀]/g, '').trim();
+
+  // Build summary from available signals
+  const sigTexts = [...signals, ...patterns].map(clean).filter(Boolean);
+  const maSignal = clean(ma.ma_signal || '');
+  const cross    = clean(ma.cross || '');
+  const rsiVal   = rsi.daily ? rsi.daily.rsi || rsi.daily : null;
+
+  // Build rating
+  let rating = s.buy_rating || '';
+  if (!rating) {
+    if (score >= 7) rating = 'STRONG BUY';
+    else if (score >= 5) rating = 'BUY';
+    else if (score >= 3) rating = 'WATCH';
+    else rating = 'SKIP';
+  }
+
+  // Build catalyst summary
+  const parts = [maSignal, cross, ...sigTexts.slice(0,3)].filter(Boolean);
+  const summary = parts.join(' · ') || 'Technical setup detected';
+
   return {
-    id:             s.id || i,
-    type,
-    ticker:         s.ticker,
-    symbol:         s.ticker,
-    company:        s.name || s.ticker,
-    sentiment,
-    conviction,
+    id:             i,
+    ticker:         s.ticker || s.symbol || '',
+    symbol:         s.ticker || s.symbol || '',
+    company:        s.name || s.ticker || '',
     score,
-    buy_rating:     s.buy_rating || '',
-    quote:          topSignal,
-    title:          topSignal,
-    source:         'Alpha Scanner',
-    timestamp:      s.savedAt || new Date().toISOString(),
-    savedAt:        s.savedAt || new Date().toISOString(),
-    catalystSummary: summary || 'Technical setup detected',
+    buy_rating:     rating,
+    sentiment:      score >= 5 ? 'bullish' : score >= 3 ? 'neutral' : 'bearish',
+    conviction:     score >= 7 ? 3 : score >= 5 ? 2 : 1,
+    catalystSummary: summary,
     estimatedImpact: score >= 7 ? '+15–30%' : score >= 5 ? '+8–15%' : '+3–8%',
-    ma_signal:      ma.ma_signal || '',
-    cross:          ma.cross || '',
-    ma50:           ma.ma50,
+    ma_signal:      maSignal,
+    cross:          cross,
+    rsi_daily:      rsiVal,
+    ma50:           ma.ma50 || ma.price,
     ma200:          ma.ma200,
-    rsi_daily:      rsi.daily  ? rsi.daily.rsi  : null,
-    rsi_weekly:     rsi.weekly ? rsi.weekly.rsi : null,
-    patterns,
-    signals,
-    news_signals:   newsItems,
+    signals:        signals.map(clean).filter(Boolean),
+    patterns:       patterns.map(clean).filter(Boolean),
+    news_signals:   news,
+    savedAt:        s.savedAt || new Date().toISOString(),
   };
 }
 
