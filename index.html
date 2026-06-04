@@ -848,6 +848,14 @@ body {
 
 <!-- ══ TAB: ASK AI ══ -->
 <div class="tab-content" id="tab-ask" style="display:flex;flex-direction:column;height:calc(100vh - 80px);padding-bottom:0">
+  <!-- API Key setter -->
+  <div id="api-key-banner" style="display:none;margin:8px 16px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:12px 14px">
+    <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:8px">🔑 Set Anthropic API Key to enable AI chat</div>
+    <div style="display:flex;gap:8px">
+      <input id="api-key-input" type="password" placeholder="sk-ant-..." style="flex:1;background:var(--surf2);border:1px solid var(--border2);color:var(--text);padding:8px 12px;border-radius:10px;font-size:12px;font-family:monospace;outline:none">
+      <button onclick="saveApiKey()" style="background:var(--green);border:none;color:white;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Outfit',sans-serif">Save</button>
+    </div>
+  </div>
   <div class="quick-prompts">
     <div class="qp" onclick="askQuick(this)">Why did AI buy ANET?</div>
     <div class="qp" onclick="askQuick(this)">What is derived demand?</div>
@@ -989,7 +997,7 @@ async function fetchAllData() {
     updateComplications();
   } else {
     const sc = document.getElementById('signals-container');
-    if (sc) sc.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>No signals yet — run the scanner!</div>';
+    if (sc) sc.innerHTML = '<div class="empty"><div class="empty-icon">📡</div><div>No signals yet</div><div style="font-size:11px;margin-top:6px;color:var(--text3)">Run the scanner to load signals</div></div>';
   }
 
   // Portfolio + prices
@@ -1052,26 +1060,26 @@ function renderSignals() {
     const tags = [...(s.signals||[]).slice(0,2), ...(s.patterns||[]).slice(0,2)].slice(0,4);
     const rsiLine = s.rsi_daily ? `RSI Daily ${s.rsi_daily}` : '';
     return `
-      <div class="scard ${colorClass}" onclick="expandCard(this)">
+      <div class="scard \${colorClass}" onclick="expandCard(this)">
         <div class="sc-top">
           <div>
-            <div class="sc-ticker" style="color:${tickerColor}">$${s.ticker}</div>
-            <div class="sc-company">${s.company}</div>
+            <div class="sc-ticker" style="color:\${tickerColor}">\$\${s.ticker}</div>
+            <div class="sc-company">\${s.company}</div>
           </div>
-          <div class="sc-score ${colorClass === 'sg' ? 'g' : colorClass === 'sb' ? 'b' : 'w'}">
-            <span class="sc-n" style="color:${tickerColor}">${s.score}</span>
+          <div class="sc-score \${colorClass === 'sg' ? 'g' : colorClass === 'sb' ? 'b' : 'w'}">
+            <span class="sc-n" style="color:\${tickerColor}">\${s.score}</span>
             <span class="sc-d">/12</span>
           </div>
         </div>
-        <div class="sc-text">${s.catalystSummary || s.quote || ''}</div>
+        <div class="sc-text">\${s.catalystSummary || s.quote || ''}</div>
         <div class="sc-tags">
-          ${rsiLine ? `<span class="stag st-g">${rsiLine}</span>` : ''}
-          ${s.ma_signal ? `<span class="stag st-b">${s.ma_signal.replace('✅ ','').replace('⚠️ ','')}</span>` : ''}
-          ${tags.slice(0,2).map(t => `<span class="stag st-t">${t.replace(/[🔥⚡👀✅⚠️📍🚀🔊📊📈📉]/g,'').trim().slice(0,25)}</span>`).join('')}
+          \${rsiLine ? `<span class="stag st-g">\${rsiLine}</span>` : ''}
+          \${s.ma_signal ? `<span class="stag st-b">\${s.ma_signal.replace('✅ ','').replace('⚠️ ','')}</span>` : ''}
+          \${tags.slice(0,2).map(t => `<span class="stag st-t">\${t.replace(/[🔥⚡👀✅⚠️📍🚀🔊📊📈📉]/g,'').trim().slice(0,25)}</span>`).join('')}
         </div>
         <div class="sc-foot">
-          <div class="sc-hold">${s.buy_rating || 'WATCH'}</div>
-          <div class="sc-target" style="color:${targetColor}">${s.estimatedImpact || ''}</div>
+          <div class="sc-hold">\${s.buy_rating || 'WATCH'}</div>
+          <div class="sc-target" style="color:\${targetColor}">\${s.estimatedImpact || ''}</div>
         </div>
       </div>
     `;
@@ -1100,8 +1108,8 @@ function renderPortfolio() {
   const val    = portfolio.total_value || 183000;
   const pnl    = portfolio.pnl || 0;
   const pnlPct = portfolio.pnl_pct || 0;
-  document.getElementById('port-val').textContent = '$' + val.toLocaleString('en-US', {maximumFractionDigits:0});
-  document.getElementById('port-pnl').innerHTML   = (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' &nbsp;(' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)';
+  document.getElementById('port-val').textContent = '\$' + val.toLocaleString('en-US', {maximumFractionDigits:0});
+  document.getElementById('port-pnl').innerHTML   = (pnl >= 0 ? '+' : '') + '\$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' &nbsp;(' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)';
   document.getElementById('port-pnl').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
 
   const posCount = Object.keys(portfolio.positions || {}).length;
@@ -1112,9 +1120,9 @@ function renderPortfolio() {
   const aiPnl = document.getElementById('ai-port-pnl');
   const aiCash = document.getElementById('ai-cash');
   const aiPos  = document.getElementById('ai-positions-count');
-  if (aiVal) aiVal.textContent = '$' + val.toLocaleString('en-US',{maximumFractionDigits:0});
-  if (aiPnl) { aiPnl.textContent = (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' (' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)'; aiPnl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)'; }
-  if (aiCash) aiCash.textContent = '$' + (portfolio.cash||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  if (aiVal) aiVal.textContent = '\$' + val.toLocaleString('en-US',{maximumFractionDigits:0});
+  if (aiPnl) { aiPnl.textContent = (pnl >= 0 ? '+' : '') + '\$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' (' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)'; aiPnl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)'; }
+  if (aiCash) aiCash.textContent = '\$' + (portfolio.cash||0).toLocaleString('en-US',{maximumFractionDigits:0});
   if (aiPos)  aiPos.textContent  = posCount;
 
   // Positions
@@ -1130,19 +1138,19 @@ function renderPortfolio() {
     const curr   = pos.current_price || pos.entry_price;
     const barW   = Math.min(Math.abs(pnlP) * 5, 100);
     return `
-      <div class="pos-card ${isPos ? 'pg' : 'pr'}">
+      <div class="pos-card \${isPos ? 'pg' : 'pr'}">
         <div class="pos-row">
           <div>
-            <div class="pos-sym" style="color:${isPos ? 'var(--green)' : 'var(--red)'}">$${ticker}</div>
-            <div class="pos-meta">${pos.shares} shares · Entry $${pos.entry_price?.toFixed(2)} · Stop $${pos.stop_loss?.toFixed(2)}</div>
+            <div class="pos-sym" style="color:\${isPos ? 'var(--green)' : 'var(--red)'}">\$\${ticker}</div>
+            <div class="pos-meta">\${pos.shares} shares · Entry \$\${pos.entry_price?.toFixed(2)} · Stop \$\${pos.stop_loss?.toFixed(2)}</div>
           </div>
           <div>
-            <div class="pos-pnl" style="color:${isPos ? 'var(--green)' : 'var(--red)'}">${pnlP >= 0 ? '+' : ''}${pnlP.toFixed(2)}%</div>
-            <div class="pos-price">$${curr?.toFixed(2)} · ${pnlAmt >= 0 ? '+' : ''}$${Math.abs(pnlAmt).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+            <div class="pos-pnl" style="color:\${isPos ? 'var(--green)' : 'var(--red)'}">\${pnlP >= 0 ? '+' : ''}\${pnlP.toFixed(2)}%</div>
+            <div class="pos-price">\$\${curr?.toFixed(2)} · \${pnlAmt >= 0 ? '+' : ''}\$\${Math.abs(pnlAmt).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
           </div>
         </div>
-        <div class="pos-bar"><div class="pos-fill" style="width:${barW}%;background:${isPos ? 'var(--green)' : 'var(--red)'}"></div></div>
-        ${pos.reasoning ? `<div class="pos-reason">"${pos.reasoning.slice(0,120)}"</div>` : ''}
+        <div class="pos-bar"><div class="pos-fill" style="width:\${barW}%;background:\${isPos ? 'var(--green)' : 'var(--red)'}"></div></div>
+        \${pos.reasoning ? `<div class="pos-reason">"\${pos.reasoning.slice(0,120)}"</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1157,18 +1165,18 @@ function renderTrades() {
     const pnl   = t.pnl || 0;
     const color = isBuy ? '#60a5fa' : pnl >= 0 ? 'var(--green)' : 'var(--red)';
     return `
-      <div class="pos-card" style="border-left:3.5px solid ${color}">
+      <div class="pos-card" style="border-left:3.5px solid \${color}">
         <div class="pos-row">
           <div>
             <div style="display:flex;align-items:center;gap:8px">
-              <span class="pos-sym" style="color:${color}">$${t.ticker}</span>
-              <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:${isBuy ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)'};color:${color}">${t.type}</span>
+              <span class="pos-sym" style="color:\${color}">\$\${t.ticker}</span>
+              <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:\${isBuy ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)'};color:\${color}">\${t.type}</span>
             </div>
-            <div class="pos-meta">${isBuy ? t.shares + ' shares @ $' + t.price?.toFixed(2) : 'Exit @ $' + (t.sell_price||0).toFixed(2)}</div>
+            <div class="pos-meta">\${isBuy ? t.shares + ' shares @ \$' + t.price?.toFixed(2) : 'Exit @ \$' + (t.sell_price||0).toFixed(2)}</div>
           </div>
           <div>
-            ${!isBuy ? `<div class="pos-pnl" style="color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>` : `<div class="pos-pnl" style="color:#60a5fa">$${(t.cost||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`}
-            <div class="pos-price">${new Date(t.date).toLocaleDateString()}</div>
+            \${!isBuy ? `<div class="pos-pnl" style="color:\${pnl>=0?'var(--green)':'var(--red)'}">\${pnl>=0?'+':''}\$\${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>` : `<div class="pos-pnl" style="color:#60a5fa">\$\${(t.cost||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`}
+            <div class="pos-price">\${new Date(t.date).toLocaleDateString()}</div>
           </div>
         </div>
       </div>
@@ -1485,11 +1493,31 @@ function renderReddit(data) {
   }).join('');
 }
 
+// ── API Key management ──
+function saveApiKey() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (key) {
+    localStorage.setItem('alpha_api_key', key);
+    window.ALPHA_API_KEY = key;
+    document.getElementById('api-key-banner').style.display = 'none';
+    const msgs = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-bubble ai';
+    div.textContent = 'API key saved! Ask me anything about the market.';
+    msgs.appendChild(div);
+  }
+}
+
+function checkApiKey() {
+  const banner = document.getElementById('api-key-banner');
+  if (!window.ALPHA_API_KEY && banner) banner.style.display = 'block';
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => {
   fetchAllData();
-  // Refresh every 5 minutes
   setInterval(fetchAllData, 5 * 60 * 1000);
+  setTimeout(checkApiKey, 500);
 });
 </script>
 </body>
