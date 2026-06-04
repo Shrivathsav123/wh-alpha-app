@@ -745,7 +745,7 @@ body {
   </div>
 
   <!-- Filters -->
-  <div class="pills">
+  <div class="pills" id="filter-pills">
     <div class="pill on" onclick="filterPill(this)">All</div>
     <div class="pill" onclick="filterPill(this)">Strong Buy</div>
     <div class="pill" onclick="filterPill(this)">Bottleneck</div>
@@ -754,59 +754,7 @@ body {
   </div>
 
   <!-- Signal Cards -->
-  <div class="scard sg">
-    <div class="sc-top">
-      <div><div class="sc-ticker" style="color:var(--green)">$AMAT</div><div class="sc-company">Applied Materials · Semiconductor Equipment</div></div>
-      <div class="sc-score g"><span class="sc-n" style="color:var(--green)">8</span><span class="sc-d">/12</span></div>
-    </div>
-    <div class="sc-text">Every AI chip needs AMAT's tools to be manufactured. Golden Cross active + institutional accumulation confirmed. Testing breakout at $504.58.</div>
-    <div class="sc-tags">
-      <span class="stag st-g">RSI 38.2 ↑</span>
-      <span class="stag st-g">Golden Cross</span>
-      <span class="stag st-b">Above 200MA</span>
-      <span class="stag st-t">Bottleneck</span>
-      <span class="stag st-w">Breakout</span>
-    </div>
-    <div class="sc-foot">
-      <div class="sc-hold">2–3 Weeks · Swing</div>
-      <div class="sc-target" style="color:var(--green)">+15–20%</div>
-    </div>
-  </div>
-
-  <div class="scard sb" style="margin-top:10px">
-    <div class="sc-top">
-      <div><div class="sc-ticker" style="color:#60a5fa">$VICR</div><div class="sc-company">Vicor Corp · AI Power Components</div></div>
-      <div class="sc-score b"><span class="sc-n" style="color:#60a5fa">6</span><span class="sc-d">/12</span></div>
-    </div>
-    <div class="sc-text">Derived demand from NVDA. Vicor supplies precision power to AI server racks. RSI oversold daily + weekly confluence — clean setup.</div>
-    <div class="sc-tags">
-      <span class="stag st-b">RSI 42.1</span>
-      <span class="stag st-b">Near 200MA</span>
-      <span class="stag st-t">Derived Demand</span>
-      <span class="stag st-g">A/D Rising</span>
-    </div>
-    <div class="sc-foot">
-      <div class="sc-hold">1–2 Weeks · Swing</div>
-      <div class="sc-target" style="color:#60a5fa">+10–15%</div>
-    </div>
-  </div>
-
-  <div class="scard sw" style="margin-top:10px">
-    <div class="sc-top">
-      <div><div class="sc-ticker" style="color:var(--gold)">$COHR</div><div class="sc-company">Coherent Corp · Optical Interconnects</div></div>
-      <div class="sc-score w"><span class="sc-n" style="color:var(--gold)">4</span><span class="sc-d">/12</span></div>
-    </div>
-    <div class="sc-text">Photonics bottleneck. Data centres need optical transceivers to transmit AI data. Fib 61.8% golden ratio zone. Watching for RSI entry.</div>
-    <div class="sc-tags">
-      <span class="stag st-w">Fib 61.8% 🌟</span>
-      <span class="stag st-w">Volume 1.8x</span>
-      <span class="stag st-t">Photonics</span>
-    </div>
-    <div class="sc-foot">
-      <div class="sc-hold">Watching · Wait for Entry</div>
-      <div class="sc-target" style="color:var(--gold)">+8–12%</div>
-    </div>
-  </div>
+  <div id="signals-container"><div class="empty"><div class="empty-icon">📡</div>Loading signals...</div></div>
 
   <!-- Reddit Pulse -->
   <div class="sec-h"><div class="sec-t">Reddit Pulse</div><div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:1px">WSB LIVE</div></div>
@@ -887,11 +835,11 @@ body {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px">
         <div style="background:var(--surf2);border-radius:12px;padding:10px;border:1px solid var(--border)">
           <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Cash</div>
-          <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">$21,546</div>
+          <div id="ai-cash" style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">—</div>
         </div>
         <div style="background:var(--surf2);border-radius:12px;padding:10px;border:1px solid var(--border)">
           <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Positions</div>
-          <div style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--green)">9</div>
+          <div id="ai-positions-count" style="font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--green)">—</div>
         </div>
         <div style="background:var(--surf2);border-radius:12px;padding:10px;border:1px solid var(--border)">
           <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Win Rate</div>
@@ -903,32 +851,9 @@ body {
 
   <div class="sec-h"><div class="sec-t">Open Positions</div><div class="sec-badge badge-elite">⭐ ELITE ONLY</div></div>
 
-  <div class="pos-card pg">
-    <div class="pos-row">
-      <div><div class="pos-sym" style="color:var(--green)">$ANET</div><div class="pos-meta">105 shares · Entry $173.42 · Stop $161.28</div></div>
-      <div><div class="pos-pnl" style="color:var(--green)">+0.90%</div><div class="pos-price">$174.98 · +$164</div></div>
-    </div>
-    <div class="pos-bar"><div class="pos-fill" style="width:60%;background:var(--green)"></div></div>
-    <div class="pos-reason">"Perfect bottleneck play — AMZN is strong and ANET supplies it via data centre networking. Classic derived demand catching up."</div>
-  </div>
-
-  <div class="pos-card pg">
-    <div class="pos-row">
-      <div><div class="pos-sym" style="color:var(--green)">$CDNS</div><div class="pos-meta">44 shares · Entry $408.18 · Stop $379.61</div></div>
-      <div><div class="pos-pnl" style="color:var(--green)">+0.42%</div><div class="pos-price">$409.89 · +$76</div></div>
-    </div>
-    <div class="pos-bar"><div class="pos-fill" style="width:35%;background:var(--green)"></div></div>
-    <div class="pos-reason">"EDA monopoly — every chip on Earth starts as software design. Golden Cross + above 200MA. Ultimate bottleneck."</div>
-  </div>
-
-  <div class="pos-card pr">
-    <div class="pos-row">
-      <div><div class="pos-sym" style="color:var(--red)">$GOOGL</div><div class="pos-meta">50 shares · Entry $362.31 · Stop $336.95</div></div>
-      <div><div class="pos-pnl" style="color:var(--red)">-0.14%</div><div class="pos-price">$361.81 · -$25</div></div>
-    </div>
-    <div class="pos-bar"><div class="pos-fill" style="width:15%;background:var(--red)"></div></div>
-    <div class="pos-reason">"Daily RSI oversold + Golden Cross + near Fib 38.2% support. High probability bounce setup."</div>
-  </div>
+  <div id="positions-container"><div class="empty"><div class="empty-icon">🤖</div>Loading positions...</div></div>
+  <div class="sec-h"><div class="sec-t">Trade History</div></div>
+  <div id="trades-container"><div class="empty"><div class="empty-icon">📋</div>No trades yet</div></div>
 </div>
 
 <!-- ══ TAB: ASK AI ══ -->
@@ -978,9 +903,277 @@ body {
 </div>
 
 <script>
-// ── Set API key (users set this in settings) ──
-// In production this comes from your backend securely
+// ── Config ──
+const GITHUB_BASE   = "https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data";
+const HISTORY_URL   = GITHUB_BASE + "/history.json";
+const PORTFOLIO_URL = GITHUB_BASE + "/portfolio.json";
+const TRADES_URL    = GITHUB_BASE + "/trades.json";
+const PRICES_URL    = GITHUB_BASE + "/prices.json";
+const PASSWORD      = "alpha2026";
+
+// API key from localStorage
 window.ALPHA_API_KEY = localStorage.getItem('alpha_api_key') || '';
+
+// ── State ──
+let allSignals  = [];
+let portfolio   = null;
+let trades      = [];
+let prices      = {};
+let activeFilter = 'All';
+
+// ── Transform scanner signal to app format ──
+function transformSignal(s, i) {
+  if (s.type && s.sentiment && s.quote) return {...s, id: s.id || i};
+  const score      = s.score || 0;
+  const sentiment  = score >= 5 ? 'bullish' : score >= 3 ? 'neutral' : 'bearish';
+  const conviction = score >= 7 ? 3 : score >= 5 ? 2 : 1;
+  const signals    = s.signals || [];
+  const patterns   = s.patterns || [];
+  const newsItems  = s.news_signals || [];
+  const topSignal  = newsItems[0]?.title || signals[0] || patterns[0] || s.buy_rating || 'Technical setup';
+  const ma         = s.ma || {};
+  const rsi        = s.rsi || {};
+  const summary    = [s.buy_rating, ma.ma_signal, ma.cross, ...signals.slice(0,2)].filter(Boolean).join(' · ');
+  let type = 'TECHNICAL';
+  if (newsItems.length > 0) type = 'STOCK_NEWS';
+  const sigStr = (signals.join(' ') + patterns.join(' ')).toLowerCase();
+  if (sigStr.includes('breakout')) type = 'MARKET_NEWS';
+  return {
+    id:             s.id || i,
+    type,
+    ticker:         s.ticker,
+    symbol:         s.ticker,
+    company:        s.name || s.ticker,
+    sentiment,
+    conviction,
+    score,
+    buy_rating:     s.buy_rating || '',
+    quote:          topSignal,
+    title:          topSignal,
+    source:         'Alpha Scanner',
+    timestamp:      s.savedAt || new Date().toISOString(),
+    savedAt:        s.savedAt || new Date().toISOString(),
+    catalystSummary: summary || 'Technical setup detected',
+    estimatedImpact: score >= 7 ? '+15–30%' : score >= 5 ? '+8–15%' : '+3–8%',
+    ma_signal:      ma.ma_signal || '',
+    cross:          ma.cross || '',
+    ma50:           ma.ma50,
+    ma200:          ma.ma200,
+    rsi_daily:      rsi.daily  ? rsi.daily.rsi  : null,
+    rsi_weekly:     rsi.weekly ? rsi.weekly.rsi : null,
+    patterns,
+    signals,
+    news_signals:   newsItems,
+  };
+}
+
+// ── Fetch all data ──
+async function fetchAllData() {
+  try {
+    const t = Date.now();
+    const [hRes, pRes, trRes, prRes] = await Promise.allSettled([
+      fetch(HISTORY_URL   + '?t=' + t),
+      fetch(PORTFOLIO_URL + '?t=' + t),
+      fetch(TRADES_URL    + '?t=' + t),
+      fetch(PRICES_URL    + '?t=' + t),
+    ]);
+
+    // Signals
+    if (hRes.status === 'fulfilled' && hRes.value.ok) {
+      const raw = await hRes.value.json();
+      if (Array.isArray(raw) && raw.length > 0) {
+        allSignals = raw.map((s,i) => transformSignal(s,i));
+        renderSignals();
+        updateComplications();
+      }
+    }
+
+    // Portfolio + live prices
+    if (pRes.status === 'fulfilled' && pRes.value.ok) {
+      portfolio = await pRes.value.json();
+
+      // Apply live prices
+      if (prRes.status === 'fulfilled' && prRes.value.ok) {
+        prices = await prRes.value.json();
+        if (portfolio.positions) {
+          let posValue = 0;
+          for (const [ticker, pos] of Object.entries(portfolio.positions)) {
+            const lp = prices[ticker];
+            if (lp && lp.price) {
+              pos.current_price = lp.price;
+              pos.pnl     = parseFloat(((lp.price - pos.entry_price) * pos.shares).toFixed(2));
+              pos.pnl_pct = parseFloat(((lp.price - pos.entry_price) / pos.entry_price * 100).toFixed(2));
+            }
+            posValue += (pos.current_price || pos.entry_price) * pos.shares;
+          }
+          portfolio.total_value = parseFloat((portfolio.cash + posValue).toFixed(2));
+          portfolio.pnl         = parseFloat((portfolio.total_value - 183000).toFixed(2));
+          portfolio.pnl_pct     = parseFloat((portfolio.pnl / 183000 * 100).toFixed(2));
+        }
+      }
+      renderPortfolio();
+    }
+
+    // Trades
+    if (trRes.status === 'fulfilled' && trRes.value.ok) {
+      trades = await trRes.value.json();
+      renderTrades();
+    }
+
+  } catch(e) { console.log('Data fetch error', e); }
+}
+
+// ── Render signals ──
+function renderSignals() {
+  const container = document.getElementById('signals-container');
+  if (!container || !allSignals.length) return;
+
+  const filtered = activeFilter === 'All' ? allSignals :
+    activeFilter === 'Strong Buy' ? allSignals.filter(s => s.score >= 7) :
+    activeFilter === 'Bottleneck' ? allSignals.filter(s => (s.patterns||[]).some(p => /bottleneck|photon|optical|power|derived/i.test(p)) || (s.signals||[]).some(sig => /bottleneck|derived/i.test(sig))) :
+    activeFilter === 'Bullish'    ? allSignals.filter(s => s.sentiment === 'bullish') :
+    activeFilter === 'News'       ? allSignals.filter(s => (s.news_signals||[]).length > 0) : allSignals;
+
+  container.innerHTML = filtered.slice(0,20).map(s => {
+    const isStrong  = s.score >= 7;
+    const isBuy     = s.score >= 5 && s.score < 7;
+    const colorClass = isStrong ? 'sg' : isBuy ? 'sb' : 'sw';
+    const tickerColor = isStrong ? 'var(--green)' : isBuy ? '#60a5fa' : 'var(--gold)';
+    const targetColor = isStrong ? 'var(--green)' : isBuy ? '#60a5fa' : 'var(--gold)';
+    const tags = [...(s.signals||[]).slice(0,2), ...(s.patterns||[]).slice(0,2)].slice(0,4);
+    const rsiLine = s.rsi_daily ? `RSI Daily ${s.rsi_daily}` : '';
+    return \`
+      <div class="scard \${colorClass}" onclick="expandCard(this)">
+        <div class="sc-top">
+          <div>
+            <div class="sc-ticker" style="color:\${tickerColor}">\$\${s.ticker}</div>
+            <div class="sc-company">\${s.company}</div>
+          </div>
+          <div class="sc-score \${colorClass === 'sg' ? 'g' : colorClass === 'sb' ? 'b' : 'w'}">
+            <span class="sc-n" style="color:\${tickerColor}">\${s.score}</span>
+            <span class="sc-d">/12</span>
+          </div>
+        </div>
+        <div class="sc-text">\${s.catalystSummary || s.quote || ''}</div>
+        <div class="sc-tags">
+          \${rsiLine ? \`<span class="stag st-g">\${rsiLine}</span>\` : ''}
+          \${s.ma_signal ? \`<span class="stag st-b">\${s.ma_signal.replace('✅ ','').replace('⚠️ ','')}</span>\` : ''}
+          \${tags.slice(0,2).map(t => \`<span class="stag st-t">\${t.replace(/[🔥⚡👀✅⚠️📍🚀🔊📊📈📉]/g,'').trim().slice(0,25)}</span>\`).join('')}
+        </div>
+        <div class="sc-foot">
+          <div class="sc-hold">\${s.buy_rating || 'WATCH'}</div>
+          <div class="sc-target" style="color:\${targetColor}">\${s.estimatedImpact || ''}</div>
+        </div>
+      </div>
+    \`;
+  }).join('');
+
+  // Reddit still static for now
+}
+
+function expandCard(el) {
+  el.style.opacity = el.style.opacity === '0.7' ? '1' : '0.7';
+}
+
+// ── Update watch face complications ──
+function updateComplications() {
+  if (!allSignals.length) return;
+  const strong = allSignals.filter(s => s.score >= 7).length;
+  document.getElementById('comp-signals').textContent = allSignals.length;
+  document.getElementById('comp-strong').textContent  = strong + '↑';
+}
+
+// ── Render portfolio ──
+function renderPortfolio() {
+  if (!portfolio) return;
+
+  // Watch face
+  const val    = portfolio.total_value || 183000;
+  const pnl    = portfolio.pnl || 0;
+  const pnlPct = portfolio.pnl_pct || 0;
+  document.getElementById('port-val').textContent = '\$' + val.toLocaleString('en-US', {maximumFractionDigits:0});
+  document.getElementById('port-pnl').innerHTML   = (pnl >= 0 ? '+' : '') + '\$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' &nbsp;(' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)';
+  document.getElementById('port-pnl').style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+  const posCount = Object.keys(portfolio.positions || {}).length;
+  document.getElementById('comp-open').textContent = posCount;
+
+  // AI Trades tab
+  const aiVal = document.getElementById('ai-port-val');
+  const aiPnl = document.getElementById('ai-port-pnl');
+  const aiCash = document.getElementById('ai-cash');
+  const aiPos  = document.getElementById('ai-positions-count');
+  if (aiVal) aiVal.textContent = '\$' + val.toLocaleString('en-US',{maximumFractionDigits:0});
+  if (aiPnl) { aiPnl.textContent = (pnl >= 0 ? '+' : '') + '\$' + Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0}) + ' (' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%)'; aiPnl.style.color = pnl >= 0 ? 'var(--green)' : 'var(--red)'; }
+  if (aiCash) aiCash.textContent = '\$' + (portfolio.cash||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  if (aiPos)  aiPos.textContent  = posCount;
+
+  // Positions
+  const posContainer = document.getElementById('positions-container');
+  if (!posContainer) return;
+  const positions = portfolio.positions || {};
+  const sorted    = Object.entries(positions).sort((a,b) => (b[1].pnl_pct||0) - (a[1].pnl_pct||0));
+
+  posContainer.innerHTML = sorted.map(([ticker, pos]) => {
+    const pnlP   = pos.pnl_pct || 0;
+    const pnlAmt = pos.pnl || 0;
+    const isPos  = pnlP >= 0;
+    const curr   = pos.current_price || pos.entry_price;
+    const barW   = Math.min(Math.abs(pnlP) * 5, 100);
+    return \`
+      <div class="pos-card \${isPos ? 'pg' : 'pr'}">
+        <div class="pos-row">
+          <div>
+            <div class="pos-sym" style="color:\${isPos ? 'var(--green)' : 'var(--red)'}">\$\${ticker}</div>
+            <div class="pos-meta">\${pos.shares} shares · Entry \$\${pos.entry_price?.toFixed(2)} · Stop \$\${pos.stop_loss?.toFixed(2)}</div>
+          </div>
+          <div>
+            <div class="pos-pnl" style="color:\${isPos ? 'var(--green)' : 'var(--red)'}">\${pnlP >= 0 ? '+' : ''}\${pnlP.toFixed(2)}%</div>
+            <div class="pos-price">\$\${curr?.toFixed(2)} · \${pnlAmt >= 0 ? '+' : ''}\$\${Math.abs(pnlAmt).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+          </div>
+        </div>
+        <div class="pos-bar"><div class="pos-fill" style="width:\${barW}%;background:\${isPos ? 'var(--green)' : 'var(--red)'}"></div></div>
+        \${pos.reasoning ? \`<div class="pos-reason">"\${pos.reasoning.slice(0,120)}"</div>\` : ''}
+      </div>
+    \`;
+  }).join('');
+}
+
+// ── Render trades history ──
+function renderTrades() {
+  const container = document.getElementById('trades-container');
+  if (!container || !trades.length) return;
+  container.innerHTML = trades.slice(0,20).map(t => {
+    const isBuy = t.type === 'BUY';
+    const pnl   = t.pnl || 0;
+    const color = isBuy ? '#60a5fa' : pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    return \`
+      <div class="pos-card" style="border-left:3.5px solid \${color}">
+        <div class="pos-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="pos-sym" style="color:\${color}">\$\${t.ticker}</span>
+              <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:\${isBuy ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)'};color:\${color}">\${t.type}</span>
+            </div>
+            <div class="pos-meta">\${isBuy ? t.shares + ' shares @ \$' + t.price?.toFixed(2) : 'Exit @ \$' + (t.sell_price||0).toFixed(2)}</div>
+          </div>
+          <div>
+            \${!isBuy ? \`<div class="pos-pnl" style="color:\${pnl>=0?'var(--green)':'var(--red)'}">\${pnl>=0?'+':''}\$\${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>\` : \`<div class="pos-pnl" style="color:#60a5fa">\$\${(t.cost||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>\`}
+            <div class="pos-price">\${new Date(t.date).toLocaleDateString()}</div>
+          </div>
+        </div>
+      </div>
+    \`;
+  }).join('');
+}
+
+// ── Filter pills ──
+function filterPill(el) {
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  activeFilter = el.textContent;
+  renderSignals();
+}
 
 // ── Theme toggle ──
 function toggleMode() {
@@ -1129,6 +1322,13 @@ async function sendChat() {
 
   messages.scrollTop = messages.scrollHeight;
 }
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  fetchAllData();
+  // Refresh every 5 minutes
+  setInterval(fetchAllData, 5 * 60 * 1000);
+});
 </script>
 </body>
 </html>
