@@ -766,30 +766,18 @@ body {
 
 <!-- ══ TAB: NEWS ══ -->
 <div class="tab-content" id="tab-news">
-  <div class="sec-h"><div class="sec-t">Live News Terminal</div><div class="sec-t" style="letter-spacing:1px">4 NEW</div></div>
-  <div class="news-item">
-    <div class="ntag u">AMAT</div>
-    <div><div class="n-head">Applied Materials wins $2.1B TSMC advanced packaging contract for CoWoS expansion</div><div class="n-time">2m · Reuters</div></div>
+  <div class="sec-h">
+    <div class="sec-t">Live News Terminal</div>
+    <div id="news-count" class="sec-t" style="letter-spacing:1px">Loading...</div>
   </div>
-  <div class="news-item">
-    <div class="ntag u">NVDA</div>
-    <div><div class="n-head">Jensen Huang reaffirms full-year Blackwell guidance — "demand is absolutely insane"</div><div class="n-time">14m · Bloomberg</div></div>
+  <div style="overflow-x:auto;display:flex;gap:6px;padding:0 16px 10px;background:var(--bg)">
+    <div class="pill on" onclick="filterNews(this,'all')" style="font-size:10px;padding:5px 12px">All</div>
+    <div class="pill" onclick="filterNews(this,'bull')" style="font-size:10px;padding:5px 12px">Bullish</div>
+    <div class="pill" onclick="filterNews(this,'bear')" style="font-size:10px;padding:5px 12px">Bearish</div>
+    <div class="pill" onclick="filterNews(this,'recent')" style="font-size:10px;padding:5px 12px">Latest</div>
   </div>
-  <div class="news-item">
-    <div class="ntag d">INTC</div>
-    <div><div class="n-head">Intel loses major hyperscaler contract to TSMC as market share concerns deepen</div><div class="n-time">31m · WSJ</div></div>
-  </div>
-  <div class="news-item">
-    <div class="ntag u">CEG</div>
-    <div><div class="n-head">Microsoft signs 20-year nuclear power deal with Constellation Energy for AI data centres</div><div class="n-time">1h · FT</div></div>
-  </div>
-  <div class="news-item">
-    <div class="ntag u">ANET</div>
-    <div><div class="n-head">Arista Networks wins record $800M hyperscaler networking contract — Q3 guidance raised</div><div class="n-time">2h · CNBC</div></div>
-  </div>
-  <div class="news-item">
-    <div class="ntag d">PLTR</div>
-    <div><div class="n-head">Palantir DOGE contract faces congressional scrutiny — DOD review ordered</div><div class="n-time">3h · Politico</div></div>
+  <div id="news-container">
+    <div class="empty"><div class="empty-icon">📰</div>Loading news from CNBC, Reuters, MarketWatch...</div>
   </div>
 </div>
 
@@ -847,6 +835,13 @@ body {
   <div class="sec-h"><div class="sec-t">Open Positions</div><div class="sec-badge badge-elite">⭐ ELITE ONLY</div></div>
 
   <div id="positions-container"><div class="empty"><div class="empty-icon">🤖</div>Loading positions...</div></div>
+  <div class="sec-h">
+    <div class="sec-t">Full Trade Log</div>
+    <div style="font-size:9px;color:var(--text3);font-weight:700;letter-spacing:1px">EVERY DECISION</div>
+  </div>
+  <div id="trade-log-container">
+    <div class="empty"><div class="empty-icon">📋</div>Trade log loads after first scan</div>
+  </div>
   <div class="sec-h"><div class="sec-t">Trade History</div></div>
   <div id="trades-container"><div class="empty"><div class="empty-icon">📋</div>No trades yet</div></div>
 </div>
@@ -905,6 +900,8 @@ const PORTFOLIO_URL = GITHUB_BASE + "/portfolio.json";
 const TRADES_URL    = GITHUB_BASE + "/trades.json";
 const PRICES_URL    = GITHUB_BASE + "/prices.json";
 const REDDIT_URL    = GITHUB_BASE + "/reddit.json";
+const NEWS_URL      = GITHUB_BASE + "/news_feed.json";
+const TRADELOG_URL  = GITHUB_BASE + "/trade_log.json";
 const PASSWORD      = "alpha2026";
 
 // API key from localStorage
@@ -975,12 +972,14 @@ function transformSignal(s, i) {
 async function fetchAllData() {
   try {
     const t = Date.now();
-    const [hRes, pRes, trRes, prRes, rdRes] = await Promise.allSettled([
+    const [hRes, pRes, trRes, prRes, rdRes, nwRes, tlRes] = await Promise.allSettled([
       fetch(HISTORY_URL   + '?t=' + t),
       fetch(PORTFOLIO_URL + '?t=' + t),
       fetch(TRADES_URL    + '?t=' + t),
       fetch(PRICES_URL    + '?t=' + t),
       fetch(REDDIT_URL    + '?t=' + t),
+      fetch(NEWS_URL     + '?t=' + t),
+      fetch(TRADELOG_URL + '?t=' + t),
     ]);
 
     // Signals
@@ -1023,6 +1022,18 @@ async function fetchAllData() {
     if (trRes.status === 'fulfilled' && trRes.value.ok) {
       trades = await trRes.value.json();
       renderTrades();
+    }
+
+    // Live News
+    if (nwRes.status === 'fulfilled' && nwRes.value.ok) {
+      const newsData = await nwRes.value.json();
+      renderLiveNews(newsData);
+    }
+
+    // Trade Log
+    if (tlRes && tlRes.status === 'fulfilled' && tlRes.value.ok) {
+      const logData = await tlRes.value.json();
+      renderTradeLog(logData);
     }
 
     // Reddit
@@ -1365,6 +1376,102 @@ async function sendChat() {
   }
 
   messages.scrollTop = messages.scrollHeight;
+}
+
+// ── Trade Log ──
+function renderTradeLog(logs) {
+  const container = document.getElementById('trade-log-container');
+  if (!container || !logs || !logs.length) return;
+
+  container.innerHTML = logs.slice(0,30).map(t => {
+    const isBuy   = t.action === 'BUY';
+    const pnl     = t.pnl || 0;
+    const color   = isBuy ? 'var(--blue,#60a5fa)' : pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    return `
+      <div class="pos-card" style="border-left:3.5px solid ${color};margin-bottom:10px">
+        <div class="pos-row">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px;font-weight:900;color:${color}">${t.ticker}</span>
+              <span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:${isBuy?'rgba(96,165,250,0.1)':'rgba(74,222,128,0.1)'};color:${color}">${t.action}</span>
+              ${t.sector ? `<span style="font-size:9px;color:var(--text3);padding:2px 6px;border-radius:4px;background:var(--surf)">${t.sector}</span>` : ''}
+            </div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">${t.date} · $${t.price?.toFixed(2)} · ${t.shares} shares</div>
+          </div>
+          <div style="text-align:right">
+            ${!isBuy && pnl !== null ? `<div style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:${pnl>=0?'var(--green)':'var(--red)'}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(0)}</div>` : `<div style="font-family:'Space Mono',monospace;font-size:14px;color:var(--text2)">$${(t.cost||0).toLocaleString()}</div>`}
+          </div>
+        </div>
+        ${t.reasoning ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">${isBuy ? 'Why we bought' : 'Why we sold'}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6">${t.reasoning.slice(0,200)}</div>
+          </div>` : ''}
+        ${t.sell_reason ? `
+          <div style="margin-top:8px">
+            <div style="font-size:9px;font-weight:700;color:var(--text3);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">Lesson learned</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;font-style:italic">${t.sell_reason.slice(0,150)}</div>
+          </div>` : ''}
+        ${t.risk_note ? `<div style="margin-top:6px;font-size:10px;color:var(--gold)">⚠ ${t.risk_note.slice(0,100)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ── News state ──
+let allNewsArticles = [];
+let newsFilter = 'all';
+
+function filterNews(el, filter) {
+  newsFilter = filter;
+  document.querySelectorAll('#tab-news .pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  renderNewsFromState();
+}
+
+function renderLiveNews(data) {
+  allNewsArticles = data || [];
+  renderNewsFromState();
+  const count = document.getElementById('news-count');
+  if (count) count.textContent = allNewsArticles.length + ' ARTICLES';
+}
+
+function renderNewsFromState() {
+  const container = document.getElementById('news-container');
+  if (!container) return;
+
+  let filtered = allNewsArticles;
+  if (newsFilter === 'bull')   filtered = allNewsArticles.filter(a => a.bull);
+  if (newsFilter === 'bear')   filtered = allNewsArticles.filter(a => a.bear);
+  if (newsFilter === 'recent') filtered = allNewsArticles.filter(a => a.recent);
+
+  if (!filtered.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📰</div>No articles found</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.slice(0,40).map(a => {
+    const tickers  = (a.tickers || []).slice(0,3);
+    const isBull   = a.bull;
+    const isBear   = a.bear;
+    const tagColor = isBull ? 'u' : isBear ? 'd' : 'u';
+    const mainTag  = tickers[0] || 'MKT';
+    return `
+      <div class="news-item" onclick="window.open('${a.link||'#'}','_blank')" style="cursor:pointer">
+        <div>
+          <div class="ntag ${tagColor}">${mainTag}</div>
+          ${tickers.slice(1).map(t => `<div class="ntag ${tagColor}" style="margin-top:3px">${t}</div>`).join('')}
+        </div>
+        <div>
+          <div class="n-head">${a.title}</div>
+          <div class="n-time" style="display:flex;gap:8px;align-items:center;margin-top:4px">
+            <span style="color:${isBull?'var(--green)':isBear?'var(--red)':'var(--text3)'};font-weight:700;font-size:9px">${isBull?'▲ BULLISH':isBear?'▼ BEARISH':'NEUTRAL'}</span>
+            <span>${a.source || 'News'}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Render Reddit ──
