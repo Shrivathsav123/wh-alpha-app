@@ -970,79 +970,73 @@ function transformSignal(s, i) {
 
 // ── Fetch all data ──
 async function fetchAllData() {
-  try {
-    const t = Date.now();
-    const [hRes, pRes, trRes, prRes, rdRes, nwRes, tlRes] = await Promise.allSettled([
-      fetch(HISTORY_URL   + '?t=' + t),
-      fetch(PORTFOLIO_URL + '?t=' + t),
-      fetch(TRADES_URL    + '?t=' + t),
-      fetch(PRICES_URL    + '?t=' + t),
-      fetch(REDDIT_URL    + '?t=' + t),
-      fetch(NEWS_URL     + '?t=' + t),
-      fetch(TRADELOG_URL + '?t=' + t),
-    ]);
+  const get = async (file) => {
+    try {
+      const r = await fetch(RAW_BASE + '/' + file + '?nc=' + Date.now());
+      if (r.ok) return await r.json();
+    } catch(e) {}
+    return null;
+  };
 
-    // Signals
-    if (hRes.status === 'fulfilled' && hRes.value.ok) {
-      const raw = await hRes.value.json();
-      if (Array.isArray(raw) && raw.length > 0) {
-        allSignals = raw.map((s,i) => transformSignal(s,i));
-        renderSignals();
-        updateComplications();
-      }
-    }
+  // Fetch all files
+  const [history, port, tradeData, priceData, redditData, newsData, logData] = await Promise.all([
+    get('history.json'),
+    get('portfolio.json'),
+    get('trades.json'),
+    get('prices.json'),
+    get('reddit.json'),
+    get('news_feed.json'),
+    get('trade_log.json'),
+  ]);
 
-    // Portfolio + live prices
-    if (pRes.status === 'fulfilled' && pRes.value.ok) {
-      portfolio = await pRes.value.json();
+  // Signals
+  if (history && Array.isArray(history) && history.length > 0) {
+    allSignals = history.map((s,i) => transformSignal(s,i));
+    renderSignals();
+    updateComplications();
+  } else {
+    const sc = document.getElementById('signals-container');
+    if (sc) sc.innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div>No signals yet — run the scanner!</div>';
+  }
 
-      // Apply live prices
-      if (prRes.status === 'fulfilled' && prRes.value.ok) {
-        prices = await prRes.value.json();
-        if (portfolio.positions) {
-          let posValue = 0;
-          for (const [ticker, pos] of Object.entries(portfolio.positions)) {
-            const lp = prices[ticker];
-            if (lp && lp.price) {
-              pos.current_price = lp.price;
-              pos.pnl     = parseFloat(((lp.price - pos.entry_price) * pos.shares).toFixed(2));
-              pos.pnl_pct = parseFloat(((lp.price - pos.entry_price) / pos.entry_price * 100).toFixed(2));
-            }
-            posValue += (pos.current_price || pos.entry_price) * pos.shares;
+  // Portfolio + prices
+  if (port) {
+    portfolio = port;
+    if (priceData) {
+      prices = priceData;
+      if (portfolio.positions) {
+        let posValue = 0;
+        for (const [ticker, pos] of Object.entries(portfolio.positions)) {
+          const lp = prices[ticker];
+          if (lp && lp.price) {
+            pos.current_price = lp.price;
+            pos.pnl     = parseFloat(((lp.price - pos.entry_price) * pos.shares).toFixed(2));
+            pos.pnl_pct = parseFloat(((lp.price - pos.entry_price) / pos.entry_price * 100).toFixed(2));
           }
-          portfolio.total_value = parseFloat((portfolio.cash + posValue).toFixed(2));
-          portfolio.pnl         = parseFloat((portfolio.total_value - 183000).toFixed(2));
-          portfolio.pnl_pct     = parseFloat((portfolio.pnl / 183000 * 100).toFixed(2));
+          posValue += (pos.current_price || pos.entry_price) * pos.shares;
         }
+        portfolio.total_value = parseFloat((portfolio.cash + posValue).toFixed(2));
+        portfolio.pnl         = parseFloat((portfolio.total_value - 183000).toFixed(2));
+        portfolio.pnl_pct     = parseFloat((portfolio.pnl / 183000 * 100).toFixed(2));
       }
-      renderPortfolio();
     }
+    renderPortfolio();
+  }
 
-    // Trades
-    if (trRes.status === 'fulfilled' && trRes.value.ok) {
-      trades = await trRes.value.json();
-      renderTrades();
-    }
+  // Trades
+  if (tradeData && Array.isArray(tradeData)) {
+    trades = tradeData;
+    renderTrades();
+  }
 
-    // Live News
-    if (nwRes.status === 'fulfilled' && nwRes.value.ok) {
-      const newsData = await nwRes.value.json();
-      renderLiveNews(newsData);
-    }
+  // Trade log
+  if (logData && Array.isArray(logData)) renderTradeLog(logData);
 
-    // Trade Log
-    if (tlRes && tlRes.status === 'fulfilled' && tlRes.value.ok) {
-      const logData = await tlRes.value.json();
-      renderTradeLog(logData);
-    }
+  // News
+  if (newsData && Array.isArray(newsData)) renderLiveNews(newsData);
 
-    // Reddit
-    if (rdRes.status === 'fulfilled' && rdRes.value.ok) {
-      const redditData = await rdRes.value.json();
-      renderReddit(redditData);
-    }
-
-  } catch(e) { console.log('Data fetch error', e); }
+  // Reddit
+  if (redditData && Array.isArray(redditData)) renderReddit(redditData);
 }
 
 // ── Render signals ──
@@ -1064,7 +1058,7 @@ function renderSignals() {
     const targetColor = isStrong ? 'var(--green)' : isBuy ? '#60a5fa' : 'var(--gold)';
     const tags = [...(s.signals||[]).slice(0,2), ...(s.patterns||[]).slice(0,2)].slice(0,4);
     const rsiLine = s.rsi_daily ? `RSI Daily ${s.rsi_daily}` : '';
-    return \`
+    return `
       <div class="scard \${colorClass}" onclick="expandCard(this)">
         <div class="sc-top">
           <div>
@@ -1078,16 +1072,16 @@ function renderSignals() {
         </div>
         <div class="sc-text">\${s.catalystSummary || s.quote || ''}</div>
         <div class="sc-tags">
-          \${rsiLine ? \`<span class="stag st-g">\${rsiLine}</span>\` : ''}
-          \${s.ma_signal ? \`<span class="stag st-b">\${s.ma_signal.replace('✅ ','').replace('⚠️ ','')}</span>\` : ''}
-          \${tags.slice(0,2).map(t => \`<span class="stag st-t">\${t.replace(/[🔥⚡👀✅⚠️📍🚀🔊📊📈📉]/g,'').trim().slice(0,25)}</span>\`).join('')}
+          \${rsiLine ? `<span class="stag st-g">\${rsiLine}</span>` : ''}
+          \${s.ma_signal ? `<span class="stag st-b">\${s.ma_signal.replace('✅ ','').replace('⚠️ ','')}</span>` : ''}
+          \${tags.slice(0,2).map(t => `<span class="stag st-t">\${t.replace(/[🔥⚡👀✅⚠️📍🚀🔊📊📈📉]/g,'').trim().slice(0,25)}</span>`).join('')}
         </div>
         <div class="sc-foot">
           <div class="sc-hold">\${s.buy_rating || 'WATCH'}</div>
           <div class="sc-target" style="color:\${targetColor}">\${s.estimatedImpact || ''}</div>
         </div>
       </div>
-    \`;
+    `;
   }).join('');
 
   // Reddit still static for now
@@ -1142,7 +1136,7 @@ function renderPortfolio() {
     const isPos  = pnlP >= 0;
     const curr   = pos.current_price || pos.entry_price;
     const barW   = Math.min(Math.abs(pnlP) * 5, 100);
-    return \`
+    return `
       <div class="pos-card \${isPos ? 'pg' : 'pr'}">
         <div class="pos-row">
           <div>
@@ -1155,9 +1149,9 @@ function renderPortfolio() {
           </div>
         </div>
         <div class="pos-bar"><div class="pos-fill" style="width:\${barW}%;background:\${isPos ? 'var(--green)' : 'var(--red)'}"></div></div>
-        \${pos.reasoning ? \`<div class="pos-reason">"\${pos.reasoning.slice(0,120)}"</div>\` : ''}
+        \${pos.reasoning ? `<div class="pos-reason">"\${pos.reasoning.slice(0,120)}"</div>` : ''}
       </div>
-    \`;
+    `;
   }).join('');
 }
 
@@ -1169,7 +1163,7 @@ function renderTrades() {
     const isBuy = t.type === 'BUY';
     const pnl   = t.pnl || 0;
     const color = isBuy ? '#60a5fa' : pnl >= 0 ? 'var(--green)' : 'var(--red)';
-    return \`
+    return `
       <div class="pos-card" style="border-left:3.5px solid \${color}">
         <div class="pos-row">
           <div>
@@ -1180,12 +1174,12 @@ function renderTrades() {
             <div class="pos-meta">\${isBuy ? t.shares + ' shares @ \$' + t.price?.toFixed(2) : 'Exit @ \$' + (t.sell_price||0).toFixed(2)}</div>
           </div>
           <div>
-            \${!isBuy ? \`<div class="pos-pnl" style="color:\${pnl>=0?'var(--green)':'var(--red)'}">\${pnl>=0?'+':''}\$\${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>\` : \`<div class="pos-pnl" style="color:#60a5fa">\$\${(t.cost||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>\`}
+            \${!isBuy ? `<div class="pos-pnl" style="color:\${pnl>=0?'var(--green)':'var(--red)'}">\${pnl>=0?'+':''}\$\${Math.abs(pnl).toLocaleString('en-US',{maximumFractionDigits:0})}</div>` : `<div class="pos-pnl" style="color:#60a5fa">\$\${(t.cost||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>`}
             <div class="pos-price">\${new Date(t.date).toLocaleDateString()}</div>
           </div>
         </div>
       </div>
-    \`;
+    `;
   }).join('');
 }
 
