@@ -379,30 +379,30 @@ function fmtMacro(id, valId, chgId, val, chg, inverse) {
 }
 
 async function fetchMacro() {
-  var tickers = ['%5EVIX', 'DX-Y.NYB', 'TLT', '%5ETNX', 'SPY'];
-  var ids = ['m-vix', 'm-dxy', 'm-tlt', 'm-10yr', 'm-spy'];
-  var chgIds = ['m-vixc', 'm-dxyc', 'm-tltc', 'm-10yrc', 'm-spyc'];
-  var inverse = [true, false, false, true, false];
-  for (var i = 0; i < tickers.length; i++) {
-    try {
-      var r = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/' + tickers[i] + '?range=1d&interval=1d');
-      if (r.ok) {
-        var d = await r.json();
-        var meta = d.chart.result[0].meta;
-        var price = meta.regularMarketPrice || meta.previousClose;
-        var prev = meta.previousClose || meta.chartPreviousClose;
-        var chg = prev ? (price - prev) / prev * 100 : 0;
-        document.getElementById(ids[i]).textContent = parseFloat(price).toFixed(2);
-        var chgEl = document.getElementById(chgIds[i]);
-        chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-        var pos = inverse[i] ? chg <= 0 : chg >= 0;
-        chgEl.className = 'mc-c ' + (pos ? 'up' : 'dn');
-        if (ids[i] === 'm-vix') {
-          document.getElementById('comp-vix').textContent = parseFloat(price).toFixed(1);
-        }
-      }
-    } catch(e) {}
-  }
+  // Read macro data from scanner prices.json (avoids CORS)
+  try {
+    var r = await fetch(RAW + '/prices.json?nc=' + Date.now());
+    if (!r.ok) return;
+    var prices = await r.json();
+    var map = [
+      { key: 'VIX',  valId: 'm-vix',  chgId: 'm-vixc',  inverse: true,  compId: 'comp-vix' },
+      { key: 'DXY',  valId: 'm-dxy',  chgId: 'm-dxyc',  inverse: false, compId: null },
+      { key: 'TLT',  valId: 'm-tlt',  chgId: 'm-tltc',  inverse: false, compId: null },
+      { key: 'TNX',  valId: 'm-10yr', chgId: 'm-10yrc', inverse: true,  compId: null },
+      { key: 'SPY',  valId: 'm-spy',  chgId: 'm-spyc',  inverse: false, compId: null },
+    ];
+    map.forEach(function(m) {
+      var d = prices[m.key];
+      if (!d) return;
+      var price = d.price, chg = d.change || 0;
+      document.getElementById(m.valId).textContent = parseFloat(price).toFixed(2);
+      var chgEl = document.getElementById(m.chgId);
+      chgEl.textContent = (chg >= 0 ? '+' : '') + parseFloat(chg).toFixed(2) + '%';
+      var pos = m.inverse ? chg <= 0 : chg >= 0;
+      chgEl.className = 'mc-c ' + (pos ? 'up' : 'dn');
+      if (m.compId) document.getElementById(m.compId).textContent = parseFloat(price).toFixed(1);
+    });
+  } catch(e) {}
 }
 
 async function fetchData() {
@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function() {
   fetchData();
   fetchMacro();
   setInterval(fetchData, 5 * 60 * 1000);
-  setInterval(fetchMacro, 60 * 1000);
+
 });
 </script>
 </body>
