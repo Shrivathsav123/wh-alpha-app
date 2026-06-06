@@ -154,6 +154,10 @@ body{background:linear-gradient(160deg,#fdf2f8 0%,#fce7f3 50%,#f5f3ff 100%);min-
 /* TABS */
 .tab-content{display:none;padding-bottom:90px}
 .tab-content.active{display:block}
+#tab-ask{padding-bottom:0}
+#tab-ask.active{display:flex;flex-direction:column;height:calc(100vh - 56px)}
+#tab-ask .chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0}
+#tab-ask .chat-foot{flex-shrink:0;padding-bottom:calc(70px + env(safe-area-inset-bottom,16px))}
 
 /* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(253,242,248,0.92);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-top:1.5px solid rgba(236,72,153,0.1);display:flex;padding:10px 0;padding-bottom:calc(10px + env(safe-area-inset-bottom,16px));z-index:300}
@@ -288,7 +292,7 @@ body{background:linear-gradient(160deg,#fdf2f8 0%,#fce7f3 50%,#f5f3ff 100%);min-
 </div>
 
 <!-- ASK AI -->
-<div class="tab-content" id="tab-ask" style="display:flex;flex-direction:column;height:calc(100vh - 80px);padding-bottom:0">
+<div class="tab-content" id="tab-ask" style="padding-bottom:0">
   <div id="api-banner" style="display:none" class="api-banner">
     <h4>Enter your Anthropic API key to activate AI chat</h4>
     <div class="api-row">
