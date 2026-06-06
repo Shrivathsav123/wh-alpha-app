@@ -284,9 +284,7 @@ body{background:linear-gradient(160deg,#fdf2f8 0%,#fce7f3 50%,#f5f3ff 100%);min-
     </div>
   </div>
   <div class="sec-h"><div class="sec-t">Open Positions</div><div class="badge-elite">ELITE ONLY</div></div>
-  <div id="pos-box"><div class="empty"><div class="empty-icon">🌸</div>No open positions yet</div></div>
-  <div class="sec-h"><div class="sec-t">Trade Log</div><div class="sec-t" style="color:rgba(80,7,36,0.2)">Private</div></div>
-  <div id="log-box"><div class="empty"><div class="empty-icon">📋</div>Trade log appears after first scan</div></div>
+  <div id="pos-box"><div class="empty"><div class="empty-icon">🌸</div>No open positions yet</div></div>Trade log appears after first scan</div></div>
 </div>
 
 <!-- ASK AI -->
@@ -434,11 +432,7 @@ async function fetchData() {
     renderPortfolio(port);
   }
 
-  var trades = await gj(RAW + '/trades.json');
-  if (trades) renderTrades(trades);
 
-  var tlog = await gj(RAW + '/trade_log.json');
-  if (tlog) renderTradeLog(tlog);
 
   var news = await gj(RAW + '/news_feed.json');
   if (news && news.length) {
@@ -518,29 +512,7 @@ function renderPortfolio(port) {
   pb.innerHTML = html;
 }
 
-function renderTrades(trades) {
-  if (!trades || !trades.length) return;
-  var lb = document.getElementById('log-box'); if (!lb) return;
-  var html = '';
-  trades.slice(0, 15).forEach(function(t) {
-    var isBuy = t.type === 'BUY', pnl = t.pnl || 0;
-    var col = isBuy ? '#9333ea' : pnl >= 0 ? '#15803d' : '#dc2626';
-    html += '<div class="pos-card" style="border-left:3.5px solid ' + col + '"><div class="pos-row"><div><div class="pos-sym" style="color:' + col + '">' + t.ticker + '</div><div class="pos-meta">' + t.type + ' · $' + (t.price || 0).toFixed(2) + '</div></div><div>' + (!isBuy ? '<div class="pos-pnl" style="color:' + col + '">' + (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toFixed(0) + '</div>' : '') + '<div class="pos-price">' + (t.date || '').slice(0, 10) + '</div></div></div>' + (t.reasoning ? '<div class="pos-reason">' + t.reasoning.slice(0, 120) + '</div>' : '') + '</div>';
-  });
-  lb.innerHTML = html;
-}
 
-function renderTradeLog(logs) {
-  if (!logs || !logs.length) return;
-  var lb = document.getElementById('log-box'); if (!lb) return;
-  var html = '';
-  logs.slice(0, 20).forEach(function(t) {
-    var isBuy = t.action === 'BUY', pnl = t.pnl || 0;
-    var col = isBuy ? '#9333ea' : pnl >= 0 ? '#15803d' : '#dc2626';
-    html += '<div class="pos-card" style="border-left:3.5px solid ' + col + '"><div class="pos-row"><div><div class="pos-sym" style="color:' + col + '">' + t.ticker + '</div><div class="pos-meta">' + t.action + ' · $' + (t.price || 0).toFixed(2) + ' · ' + (t.sector || '') + '</div></div><div>' + (!isBuy && t.pnl !== null ? '<div class="pos-pnl" style="color:' + col + '">' + (pnl >= 0 ? '+' : '') + '$' + Math.abs(pnl).toFixed(0) + '</div>' : '') + '<div class="pos-price">' + (t.date || '').slice(0, 10) + '</div></div></div>' + (t.reasoning ? '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(236,72,153,0.1)"><div style="font-size:9px;font-weight:700;color:rgba(80,7,36,0.3);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">WHY WE ' + t.action + '</div><div style="font-size:12px;color:rgba(80,7,36,0.5);line-height:1.6">' + t.reasoning.slice(0, 200) + '</div></div>' : '') + (t.sell_reason ? '<div style="margin-top:8px"><div style="font-size:9px;font-weight:700;color:#9333ea;letter-spacing:1px;margin-bottom:4px;text-transform:uppercase">LESSON</div><div style="font-size:12px;color:rgba(80,7,36,0.45);line-height:1.6;font-style:italic">' + t.sell_reason.slice(0, 150) + '</div></div>' : '') + '</div>';
-  });
-  lb.innerHTML = html;
-}
 
 function renderNews() {
   var c = document.getElementById('news-box'); if (!c) return;
