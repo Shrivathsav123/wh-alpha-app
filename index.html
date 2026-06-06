@@ -386,7 +386,21 @@ function loadChart() {
 
 function updateChart(t) {
   curTicker = t;
-  document.getElementById('chart-frame').src = 'https://s.tradingview.com/widgetembed/?frameElementId=tv&symbol=NASDAQ:' + t + '&interval=D&hidesidetoolbar=0&studies=RSI%40tv-basicstudies&theme=' + (darkMode ? 'dark' : 'light') + '&style=1&timezone=America%2FNew_York&withdateranges=1&allow_symbol_change=1';
+  // NYSE stocks use NYSE prefix, Nasdaq use NASDAQ — use auto-resolve with no prefix
+  // TradingView auto-finds the exchange when no prefix given
+  var theme = darkMode ? 'dark' : 'light';
+  var url = 'https://s.tradingview.com/widgetembed/?frameElementId=tv'
+    + '&symbol=' + encodeURIComponent(t)
+    + '&interval=D'
+    + '&hidesidetoolbar=0'
+    + '&studies=RSI%40tv-basicstudies'
+    + '&theme=' + theme
+    + '&style=1'
+    + '&timezone=America%2FNew_York'
+    + '&withdateranges=1'
+    + '&allow_symbol_change=1'
+    + '&save_image=0';
+  document.getElementById('chart-frame').src = url;
 }
 
 function gj(url) {
