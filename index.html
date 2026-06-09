@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Alpha Terminal</title>
+<title>MeritQuant</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -36,7 +36,6 @@
 
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden}
 
-/* Animated starfield background */
 body::before{
   content:'';position:fixed;inset:0;
   background:
@@ -75,7 +74,6 @@ body::before{
 .r1{width:340px;height:340px;border:1px solid rgba(168,85,247,0.1);animation-duration:25s}
 .r2{width:260px;height:260px;border:1px solid rgba(139,92,246,0.08);animation-duration:18s;animation-direction:reverse}
 .r3{width:190px;height:190px;border:1px solid rgba(99,102,241,0.06);animation-duration:32s}
-/* Star dots on rings */
 .r1::before{content:'';position:absolute;top:-3px;left:50%;width:6px;height:6px;background:rgba(168,85,247,0.8);border-radius:50%;transform:translateX(-50%);box-shadow:0 0 8px rgba(168,85,247,0.8)}
 .r2::before{content:'';position:absolute;bottom:-3px;left:50%;width:4px;height:4px;background:rgba(139,92,246,0.8);border-radius:50%;transform:translateX(-50%);box-shadow:0 0 6px rgba(139,92,246,0.8)}
 .wf-center{position:relative;z-index:2;text-align:center}
@@ -215,7 +213,6 @@ body::before{
 .empty{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px}
 .empty-icon{font-size:40px;margin-bottom:12px}
 
-/* AI portfolio card */
 .port-card{margin:16px;background:rgba(139,92,246,0.06);border:1px solid var(--border);border-radius:20px;padding:20px;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(168,85,247,0.1)}
 
 @keyframes typing{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
@@ -228,7 +225,7 @@ body::before{
 
 <div class="hdr">
   <div class="hdr-inner">
-    <div class="logo">ALPHA<em>TERMINAL</em></div>
+    <div class="logo">MERIT<em>QUANT</em></div>
     <div class="hdr-right">
       <div class="live-badge"><div class="ldot"></div>LIVE</div>
       <button class="toggle" onclick="toggleMode()"><div class="knob"></div></button>
@@ -315,7 +312,7 @@ body::before{
 <!-- AI TRADES -->
 <div class="tab-content" id="tab-ai">
   <div class="port-card">
-    <div style="font-size:9px;font-weight:700;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;font-family:'JetBrains Mono',monospace">AI Portfolio</div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:3px;color:var(--text3);text-transform:uppercase;margin-bottom:6px;font-family:'JetBrains Mono',monospace">MeritQuant AI Portfolio</div>
     <div id="ai-val" style="font-size:34px;font-weight:800;letter-spacing:-1.5px;color:var(--text)">$183,000</div>
     <div id="ai-pnl" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--green);margin-top:4px">+$0 (0.00%)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px">
@@ -354,7 +351,7 @@ body::before{
     <div class="qp" onclick="askQ(this)">Best play today?</div>
   </div>
   <div class="chat-msgs" id="chat-msgs">
-    <div class="cb ai">ALPHA TERMINAL — Analyst online. Ask me anything about a stock, macro condition, or trade decision.</div>
+    <div class="cb ai">MERITQUANT — Analyst online. Ask me anything about a stock, macro condition, or trade decision.</div>
   </div>
   <div class="chat-foot">
     <input class="chat-inp" id="chat-inp" placeholder="Query the market..." onkeydown="if(event.key==='Enter')sendChat()">
@@ -372,8 +369,8 @@ body::before{
 </div>
 
 <script>
-var RAW = 'https://raw.githubusercontent.com/Shrivathsav123/alpha-scanner/main/data';
-var KEY = localStorage.getItem('alpha_api_key') || '';
+var RAW = 'https://raw.githubusercontent.com/Shrivathsav123/meritquant/main/data';
+var KEY = localStorage.getItem('meritquant_api_key') || '';
 var signals = [], newsAll = [], newsFilter = 'all', activeFil = 'All', curTicker = 'NVDA', chatHistory = [], lightMode = false;
 
 function toggleMode() {
@@ -485,7 +482,7 @@ async function fetchData() {
     document.getElementById('news-count').textContent = news.length+' ARTICLES';
   } else if (signals.length) {
     var fb = [];
-    signals.forEach(function(s){if(s.news_signals&&s.news_signals.length)s.news_signals.forEach(function(n){fb.push({title:n.title||n,source:n.source||'Alpha Scanner',tickers:[s.ticker],bull:(n.score||0)>0,bear:(n.score||0)<0,recent:true});});});
+    signals.forEach(function(s){if(s.news_signals&&s.news_signals.length)s.news_signals.forEach(function(n){fb.push({title:n.title||n,source:n.source||'MeritQuant Scanner',tickers:[s.ticker],bull:(n.score||0)>0,bear:(n.score||0)<0,recent:true});});});
     if (fb.length){newsAll=fb;renderNews();document.getElementById('news-count').textContent=fb.length+' SIGNALS';}
   }
 
@@ -587,7 +584,7 @@ function renderReddit(data) {
   c.innerHTML=html;
 }
 
-var AI_SYS = 'You are the built-in analyst for Alpha Terminal — an autonomous AI trading system managing a $183,000 paper portfolio. You have full context of this system. The Alpha Terminal AI scanner runs 5x per day scanning 270+ stocks across AI bottlenecks, biotech, oil, defence, and materials. It scores every trade 0-10 using macro regime analysis, RSI, moving averages, yield curve, VIX, and a memory system that learns from every losing trade. IMPORTANT RULES: 1) When asked about portfolio positions or trades — explain the Alpha Terminal AI decisions, reference the AI Trades tab for live positions. 2) When asked about news or headlines — tell them to check the News tab which pulls live from CNBC, Reuters, MarketWatch. 3) When asked about a stock price — tell them to check the Charts tab for the live TradingView chart, and give your analysis of that stock based on current macro. 4) NEVER say you cannot access the portfolio, news, or prices — you are part of this system, direct users to the correct tab. You think like a Goldman Sachs portfolio manager but communicate so clearly that anyone can follow. Always lead with the conclusion first. Back it up with specific numbers and levels. Be direct and authoritative, never casual or chatty. Never use filler phrases. 4-6 sentences maximum — every sentence earns its place. Current market context: post-NFP selloff June 2026, VIX at 21 (elevated fear), 10yr yield at 4.54% (rate hike risk), semis under pressure after Broadcom earnings, dollar mixed. Not financial advice.'
+var AI_SYS = 'You are the built-in analyst for MeritQuant — an autonomous AI trading system managing a $183,000 paper portfolio that mirrors a real NGO trust account. You have full context of this system. The MeritQuant scanner runs 5x per day scanning 270+ stocks across AI bottlenecks, biotech, oil, defence, and materials. It scores every trade 0-10 using macro regime analysis, RSI, moving averages, yield curve, VIX, and a memory system that learns from every losing trade. IMPORTANT RULES: 1) When asked about portfolio positions or trades — explain the MeritQuant AI decisions, reference the AI Trades tab for live positions. 2) When asked about news or headlines — tell them to check the News tab which pulls live from CNBC, Reuters, MarketWatch. 3) When asked about a stock price — tell them to check the Charts tab for the live TradingView chart, and give your analysis of that stock based on current macro. 4) NEVER say you cannot access the portfolio, news, or prices — you are part of this system, direct users to the correct tab. You think like a Goldman Sachs portfolio manager but communicate so clearly that anyone can follow. Always lead with the conclusion first. Back it up with specific numbers and levels. Be direct and authoritative, never casual or chatty. Never use filler phrases. 4-6 sentences maximum — every sentence earns its place. Current market context: post-NFP selloff June 2026, VIX at 21 (elevated fear), 10yr yield at 4.54% (rate hike risk), semis under pressure after Broadcom earnings, dollar mixed. Not financial advice.'
 
 async function sendChat() {
   var inp=document.getElementById('chat-inp'),msg=inp.value.trim();
@@ -598,7 +595,7 @@ async function sendChat() {
   chatHistory.push({role:'user',content:msg});
   var typing=document.createElement('div');typing.className='cb ai typing';typing.innerHTML='<span>.</span><span>.</span><span>.</span>';msgs.appendChild(typing);
   msgs.scrollTop=msgs.scrollHeight;
-  var apiKey=KEY||localStorage.getItem('alpha_api_key')||'';
+  var apiKey=KEY||localStorage.getItem('meritquant_api_key')||'';
   if(!apiKey){
     typing.remove();
     var ab=document.createElement('div');ab.className='cb ai';ab.textContent='API key required. Enter your Anthropic key above to activate.';msgs.appendChild(ab);
@@ -624,8 +621,8 @@ function askQ(el){document.getElementById('chat-inp').value=el.textContent;sendC
 
 function saveKey(){
   var k=document.getElementById('api-inp').value.trim();
-  if(k){localStorage.setItem('alpha_api_key',k);KEY=k;document.getElementById('api-banner').style.display='none';
-  var msgs=document.getElementById('chat-msgs');var ab=document.createElement('div');ab.className='cb ai';ab.textContent='System online. Ready.';msgs.appendChild(ab);msgs.scrollTop=msgs.scrollHeight;}
+  if(k){localStorage.setItem('meritquant_api_key',k);KEY=k;document.getElementById('api-banner').style.display='none';
+  var msgs=document.getElementById('chat-msgs');var ab=document.createElement('div');ab.className='cb ai';ab.textContent='MeritQuant online. Ready.';msgs.appendChild(ab);msgs.scrollTop=msgs.scrollHeight;}
 }
 
 document.addEventListener('DOMContentLoaded',function(){
